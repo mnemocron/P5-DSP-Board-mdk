@@ -30,37 +30,16 @@ I2C_HandleTypeDef *hi2cCODEC;
 // --> external OSC provides clock
 
 const uint16_t TLV320_init_data[10] = {
-    0x01B, // Reg 00: Left Line In (6dB, mute OFF)
-    0x01B, // Reg 01: Right Line In (6dB, mute OFF)
-    0x06C, // Reg 02: Left Headphone out (-12dB)
-    0x06C, // Reg 03: Right Headphone out (-12dB)
-    0x012, // Reg 04: Analog Audio Path Control (DAC sel, Mute Mic)
-    0x00, // Reg 05: Digital Audio Path Control
-    0x020, // Reg 06: Power Down Control (OSC OFF) (for external clock ?)
-    //0x000, // Reg 06: Power Down Control (All ON)
-    0x042, // Reg 07: Digital Audio Interface Format (I2S, 16-bit, master)
-	
-#if CODEC_SAMPLE_RATE == 96000
-    // Reg 08: Sampling Control (Clock Out divided by 1, USB, 250x, 96k ADC/DAC)
-    0x01D,
-#endif
-#if CODEC_SAMPLE_RATE == 44100
-    // Reg 08: Sampling Control (Clock Out divided by 1, USB, 250x, 44.1k ADC/DAC)
-    0x023,
-#endif
-#if CODEC_SAMPLE_RATE == 48000
-    // Reg 08: Sampling Control (Clock Out divided by 2, USB, 250x, 48k ADC/DAC)
-    0x001,
-#endif
-#if CODEC_SAMPLE_RATE == 32000
-    // Reg 08: Sampling Control (Clock Out divided by 1, USB, 250x, 32k ADC/DAC)
-    0x019,
-#endif
-#if CODEC_SAMPLE_RATE == 8000
-    // Reg 08: Sampling Control (Clock Out divided by 1, USB, 250x, 8k ADC/DAC)
-    0x00D,
-#endif
-        0x001 // Reg 09: Active Control
+	0x117, // Reg 00: Left  Line In (L/R simulataneous update, Mute Off, +0dB)
+	0x117, // Reg 01: Right Line In (L/R simulataneous update, Mute Off, +0dB)
+  0x06C, // Reg 02: Left Headphone out (-12dB)
+  0x06C, // Reg 03: Right Headphone out (-12dB)
+  0x012, // Reg 04: Analog Audio Path Control (DAC sel, Mute Mic)
+	0x000, // Reg 05: Digital Audio Path Control
+	0x000, // Reg 06: Power Down Control (All ON)
+	0x041, // Reg 07: Digital Audio Interface (Master, 16-bit, MSB-first left allign)
+	0x000, // Reg 08: Sample Rate Control (1:1 MCLK out, 1:1 MCLK in, 48kHz)
+	0x001  // Reg 09: Active Control
 };
 
 unsigned long samplerate=CODEC_SAMPLE_RATE;

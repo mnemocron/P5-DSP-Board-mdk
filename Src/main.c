@@ -26,6 +26,7 @@
 #include "ssd1306.h"
 #include "tlv320aic.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 /* USER CODE END Includes */
 
@@ -40,7 +41,7 @@
 #define ADDR_OLED  0x78
 
 #define PI 3.1415926f
-#define F_S 47348.0f
+#define F_S 48000.0f
 #define F_OUT 1000.0f
 /* USER CODE END PD */
 
@@ -57,6 +58,8 @@ I2S_HandleTypeDef hi2s2;
 DMA_HandleTypeDef hdma_i2s2_ext_rx;
 DMA_HandleTypeDef hdma_spi2_tx;
 
+RNG_HandleTypeDef hrng;
+
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
@@ -68,10 +71,11 @@ SSD1306_t holedL;
 
 float mySinVal;
 float sample_dt;
-uint16_t sample_N;
+uint16_t volatile sample_N;
 uint16_t i_t;
 uint32_t myDacVal;
-uint16_t dataI2S[100];
+volatile uint16_t pTxData[128];
+volatile uint16_t pRxData[128];
 
 /* USER CODE END PV */
 
@@ -85,6 +89,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_I2S2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_RNG_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -181,6 +186,7 @@ int main(void)
   MX_I2S2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_RNG_Init();
   /* USER CODE BEGIN 2 */
 	
 	// IMPORTANT !!!
@@ -222,30 +228,39 @@ int main(void)
 	TLV320_Init(&hi2c1);
 	TLV320_Mute(0);       // mute off
 	TLV320_SetInput(LINE);
-	TLV320_SetLineInVol(0x01F);
+	TLV320_SetLineInVol(0x008);
 	TLV320_SetHeadphoneVol(0x04F);
+	
+	for(uint8_t i=0; i<128; i++){
+		pRxData[i] = 0;
+		pTxData[i] = 0;
+	}
 	
 	// @TODO Sine Wave is ugly, not back to finish
   sample_dt = F_OUT/F_S;
   sample_N = F_S/F_OUT;
 	// Build Sine wave, print values to console for inspection in MATLAB
 	printf("xt = [");
+	srand(234);
 	for(uint16_t i=0; i<sample_N; i++)
 	{
 		mySinVal = sinf(i*2*PI*sample_dt);
-		dataI2S[i*2]     = (uint16_t)((mySinVal +1)*2000); //Right data (0 2 4 6 8 10 12)
-		dataI2S[i*2 + 1] = (uint16_t)((mySinVal +1)*2000); //Left data  (1 3 5 7 9 11 13)
+		pTxData[i*2]     = (uint16_t)((mySinVal +1)*8000); //Right data (0 2 4 6 8 10 12)
+		pTxData[i*2 + 1] = (uint16_t)((1 - mySinVal)*2000); //Left data  (1 3 5 7 9 11 13)
+		//pTxData[i*2 + 1] = 0;
 		if(i) printf(",");
-		printf("%d ", dataI2S[i*2]);
+		printf("%d ", pTxData[i*2]);
 	}
 	printf("];\nplot(linspace(0,1/%.2f,%d), xt);\n", F_OUT, (int)(sample_N));
-	HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t *)dataI2S, sample_N*2);
+	// HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t *)dataI2S, sample_N*2);
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, sample_N*2);
 	
 	HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); // start encoder mode
 	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1);
 	TIM3->CNT = 0; // initialize zero
 	TIM4->CNT = 0;
 
+	HAL_GPIO_WritePin(SET_LIN_GPIO_Port, SET_LIN_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -255,12 +270,17 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		
 		int enc_val_1 = (65535 - (TIM3->CNT)) /2;  // change rotation direction: CW/CCW - count up/down
 		int enc_val_2 = (        (TIM4->CNT)) /2;
 		
-		HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+    HAL_Delay(1000);
+		printf("xt = [");
+		for(uint8_t i=0; i<64; i++){
+			if(i) printf(",");
+			printf("%d ", pTxData[i*2]);
+		}
+		printf("];\nplot(linspace(0,1/%.2f,%d), xt);\n", F_OUT, (int)(sample_N));
 		
 		// printf("ENC: 1:%d \t 2:%d\n", enc_val_1, enc_val_2);
 		
@@ -296,8 +316,13 @@ void SystemClock_Config(void)
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 8;
+  RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -306,22 +331,18 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2S_APB1;
-  PeriphClkInitStruct.PLLI2S.PLLI2SN = 50;
-  PeriphClkInitStruct.PLLI2S.PLLI2SM = 6;
-  PeriphClkInitStruct.PLLI2S.PLLI2SR = 2;
-  PeriphClkInitStruct.PLLI2S.PLLI2SQ = 2;
-  PeriphClkInitStruct.PLLI2SSelection = RCC_PLLI2SCLKSOURCE_EXT;
-  PeriphClkInitStruct.I2sApb1ClockSelection = RCC_I2SAPB1CLKSOURCE_PLLI2S;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2S_APB1|RCC_PERIPHCLK_CLK48;
+  PeriphClkInitStruct.Clk48ClockSelection = RCC_CLK48CLKSOURCE_PLLQ;
+  PeriphClkInitStruct.I2sApb1ClockSelection = RCC_I2SAPB1CLKSOURCE_EXT;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -409,16 +430,16 @@ static void MX_I2S2_Init(void)
   /* USER CODE END I2S2_Init 0 */
 
   /* USER CODE BEGIN I2S2_Init 1 */
-
+	// @TODO change 16BIT extended
   /* USER CODE END I2S2_Init 1 */
   hi2s2.Instance = SPI2;
-  hi2s2.Init.Mode = I2S_MODE_MASTER_TX;
-  hi2s2.Init.Standard = I2S_STANDARD_PHILIPS;
-  hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B;
+  hi2s2.Init.Mode = I2S_MODE_SLAVE_TX;
+  hi2s2.Init.Standard = I2S_STANDARD_MSB;
+  hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B_EXTENDED;
   hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
-  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_8K;
+  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_48K;
   hi2s2.Init.CPOL = I2S_CPOL_LOW;
-  hi2s2.Init.ClockSource = I2S_CLOCK_PLL;
+  hi2s2.Init.ClockSource = I2S_CLOCK_EXTERNAL;
   hi2s2.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_ENABLE;
   if (HAL_I2S_Init(&hi2s2) != HAL_OK)
   {
@@ -427,6 +448,32 @@ static void MX_I2S2_Init(void)
   /* USER CODE BEGIN I2S2_Init 2 */
 
   /* USER CODE END I2S2_Init 2 */
+
+}
+
+/**
+  * @brief RNG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RNG_Init(void)
+{
+
+  /* USER CODE BEGIN RNG_Init 0 */
+
+  /* USER CODE END RNG_Init 0 */
+
+  /* USER CODE BEGIN RNG_Init 1 */
+
+  /* USER CODE END RNG_Init 1 */
+  hrng.Instance = RNG;
+  if (HAL_RNG_Init(&hrng) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RNG_Init 2 */
+
+  /* USER CODE END RNG_Init 2 */
 
 }
 
@@ -645,6 +692,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BTN_ENC1_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 

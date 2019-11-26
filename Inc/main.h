@@ -70,10 +70,13 @@ void Error_Handler(void);
 #define I2S2_DOUT_GPIO_Port GPIOC
 #define SW1_Pin GPIO_PIN_0
 #define SW1_GPIO_Port GPIOA
+#define SW1_EXTI_IRQn EXTI0_IRQn
 #define SW2_Pin GPIO_PIN_1
 #define SW2_GPIO_Port GPIOA
+#define SW2_EXTI_IRQn EXTI1_IRQn
 #define BTN_ENC2_Pin GPIO_PIN_13
 #define BTN_ENC2_GPIO_Port GPIOB
+#define BTN_ENC2_EXTI_IRQn EXTI15_10_IRQn
 #define SET_I_LIM_Pin GPIO_PIN_14
 #define SET_I_LIM_GPIO_Port GPIOB
 #define LED2_Pin GPIO_PIN_15
@@ -82,6 +85,7 @@ void Error_Handler(void);
 #define LED1_GPIO_Port GPIOC
 #define BTN_ENC1_Pin GPIO_PIN_12
 #define BTN_ENC1_GPIO_Port GPIOC
+#define BTN_ENC1_EXTI_IRQn EXTI15_10_IRQn
 #define ENC2_B_Pin GPIO_PIN_4
 #define ENC2_B_GPIO_Port GPIOB
 #define ENC2_A_Pin GPIO_PIN_5
