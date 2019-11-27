@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * @file        dsp_board_bsp.c
+ * @brief       C Library for Board spesific functionalities (BSP)
+ * @details     This file contains definitions for FHNW P5 DSP Board LEDs,
+ *              push-buttons hardware resources.
+ * @version     0.1
+ * @author      Simon Burkhardt
+ * @author      Mischa Studer
+ * @date        2019.11.27
+ * @copyright   (c) 2019 Fachhochschule Nordwestschweiz FHNW
+ *              all rights reserved
+ * @note        EIT Projekt 5 - HS19 - "DSP Board", Betreuer: Markus Hufschmid
+*******************************************************************************/
 
 #include <stdio.h>
 #include "main.h"
@@ -10,6 +23,10 @@ EncoderValues_t henc2;
 
 extern ADC_HandleTypeDef hadc1;
 
+/* Read Battery Voltage ------------------------------------------------------*/
+/**
+* @ TODO : make this work with ADC / HAL / DMA
+	*/
 float BSP_ReadBatteryVoltage(uint16_t* values, uint8_t size)
 {
 	uint32_t sum = 0;
@@ -25,6 +42,7 @@ float BSP_ReadBatteryVoltage(uint16_t* values, uint8_t size)
 	return 0.733333f * (float)(sum) * (3.3f/4096.0f);  // 4.5V correction factor = 0.7333
 }
 
+/* Set max Battery Charge Current --------------------------------------------*/
 void BSP_SetBatteryCurrent(ChargeCurrent_t current)
 {
 	if(current == CHARGE_CURRENT_500MA)
@@ -33,26 +51,49 @@ void BSP_SetBatteryCurrent(ChargeCurrent_t current)
 		HAL_GPIO_WritePin(SET_I_LIM_GPIO_Port, SET_I_LIM_Pin, GPIO_PIN_RESET);
 }
 
-int32_t BSP_ReadEncoder_Difference(EncoderPosition_t encoder)
+/* Read Encoder Delta --------------------------------------------------------*/
+int16_t BSP_ReadEncoder_Difference(EncoderPosition_t encoder)
 {
 	BSP_ReadEncoder(encoder); // update both encoders
-
-	// @TODO
-	return 0;
+	int16_t delta = 0;
+	if(encoder == ENCODER_LEFT){
+		delta = henc1.delta; // return accumulated delta
+		henc1.delta = 0;  // clear for new accumulation
+	} else {
+		delta = henc2.delta;
+		henc2.delta = 0;
+	}
+	return delta;
 }
 
-uint32_t BSP_ReadEncoder(EncoderPosition_t encoder)
+/* Read Encoder Value --------------------------------------------------------*/
+uint16_t BSP_ReadEncoder(EncoderPosition_t encoder)
 {
+	int16_t oldval = (int16_t)henc1.value;  // remember previous value
+	henc1.value = (((0xffff - TIM3->CNT)/2) +1) & 0x7fff;  // right encoder
+	int16_t delta = (int16_t)henc1.value - oldval;  // calculate difference
+	if(delta > 255) // overflow occured
+		delta = (int16_t)henc1.value - (INT16_MAX+1) - oldval;
+	if(delta < -255) // underflow occured
+		delta = (int16_t)henc1.value + (INT16_MAX+1) - oldval;
+	henc1.delta += delta;  // update difference
 	
-	henc1.value = (0xffff - TIM3->CNT)/2 +1;  // right encoder
-	henc2.value = (         TIM4->CNT)/2;     // left encoder
-	
+	oldval = (int16_t)henc2.value;  // remember previous value
+	henc2.value = (((         TIM4->CNT)/2)   ) & 0x7fff;     // left encoder
+	delta = (int16_t)henc2.value - oldval;  // calculate difference
+	if(delta > 255) // overflow occured
+		delta = (int16_t)henc2.value - (INT16_MAX+1) - oldval;
+	if(delta < -255) // underflow occured
+		delta = (int16_t)henc2.value + (INT16_MAX+1) - oldval;
+	henc2.delta += delta;  // update difference
+
 	if(encoder == ENCODER_LEFT)
 		return henc1.value;
 	else
 		return henc2.value;
 }
 
+/* Select Audio Source -------------------------------------------------------*/
 void BSP_SelectAudioIn(uint8_t mode)
 {
 	if(mode == AUDIO_IN_EXT){
@@ -64,6 +105,7 @@ void BSP_SelectAudioIn(uint8_t mode)
 	}
 }
 
+/* SineWave Generator --------------------------------------------------------*/
 uint16_t BSP_SineWave(float fs, float fout, uint16_t A, uint16_t* pData, uint16_t len)
 {
 	float Ts   = 1.0f/fs;   // Sampling Period
@@ -85,7 +127,7 @@ uint16_t BSP_SineWave(float fs, float fout, uint16_t A, uint16_t* pData, uint16_
 	return n_samples;
 }
 
-
+/* Print MATLAB --------------------------------------------------------------*/
 void BSP_Print_to_Matlab(uint16_t* vals, uint16_t len)
 {
 	printf("x = [");
@@ -97,7 +139,7 @@ void BSP_Print_to_Matlab(uint16_t* vals, uint16_t len)
 	printf("plot(x); grid on;\n\n");
 }
 
-/** scan I2C ------------------------------------------------------------------*/
+/* Scan I2C ------------------------------------------------------------------*/
 void BSP_I2C_ScanAddresses(I2C_HandleTypeDef *hi2c)
 {
 	uint8_t error, address;

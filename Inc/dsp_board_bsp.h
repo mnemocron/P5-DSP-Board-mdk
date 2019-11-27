@@ -1,11 +1,17 @@
-/**
-  ******************************************************************************
-  * @file    dsp_board_bsp.h
-  * @author  Simon Burkhardt
-  * @brief   This file contains definitions for FHNW P5 DSP Board LEDs,
-  *          push-buttons hardware resources.
-  ******************************************************************************
-  */
+
+/*******************************************************************************
+ * @file        dsp_board_bsp.h
+ * @brief       C Library for Board spesific functionalities (BSP)
+ * @details     This file contains definitions for FHNW P5 DSP Board LEDs,
+ *              push-buttons hardware resources.
+ * @version     0.1
+ * @author      Simon Burkhardt
+ * @author      Mischa Studer
+ * @date        2019.11.27
+ * @copyright   (c) 2019 Fachhochschule Nordwestschweiz FHNW
+ *              all rights reserved
+ * @note        EIT Projekt 5 - HS19 - "DSP Board", Betreuer: Markus Hufschmid
+*******************************************************************************/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __DSP_BOARD_BSP_H
@@ -94,16 +100,16 @@ typedef enum {
 } ChargeCurrent_t;
 
 typedef struct {
-	uint32_t value;
-	uint32_t delta;
+	uint16_t value;
+	 int16_t delta;
 } EncoderValues_t;
 
 void BSP_I2C_ScanAddresses(I2C_HandleTypeDef*);
 void BSP_Print_to_Matlab(uint16_t*, uint16_t);
 uint16_t BSP_SineWave(float, float, uint16_t, uint16_t*, uint16_t);
 void BSP_SelectAudioIn(uint8_t);
-uint32_t BSP_ReadEncoder(EncoderPosition_t);
-int32_t BSP_ReadEncoder_Difference(EncoderPosition_t);
+uint16_t BSP_ReadEncoder(EncoderPosition_t);
+int16_t BSP_ReadEncoder_Difference(EncoderPosition_t);
 void BSP_SetBatteryCurrent(ChargeCurrent_t);
 float BSP_ReadBatteryVoltage(uint16_t*, uint8_t);
 

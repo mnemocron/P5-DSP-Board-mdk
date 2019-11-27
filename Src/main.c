@@ -181,7 +181,7 @@ int main(void)
 	ssd1306_Init(&holedL);
 	ssd1306_Fill(&holedL, Black);
 	ssd1306_SetCursor(&holedL, 2, 20);
-	ssd1306_WriteString(&holedL, "Volume", Font_11x18, White);
+	ssd1306_WriteString(&holedL, "Line Vol", Font_11x18, White);
 	ssd1306_UpdateScreen(&holedL);
 	ssd1306_Init(&holedR);
 	ssd1306_Fill(&holedR, Black);
@@ -229,15 +229,19 @@ int main(void)
 	uint8_t input_state = 0;
 	uint8_t update_counter = 0;
 	
-	uint8_t volume_line = 0, volume_hp = 0;
-	float volume_line_dB = -34.5f;
+	uint16_t volume_line = 0, volume_hp = 0;
+	float volume_dB = -34.5f;
 	uint8_t newvolume_line = BSP_ReadEncoder(ENCODER_LEFT) % (0x1F+1);
 	
 	char lcd_buf[18];
-	sprintf(lcd_buf, "%.1f dB  ", volume_line_dB);
+	sprintf(lcd_buf, "%.1f dB  ", volume_dB);
 	ssd1306_SetCursor(&holedL, 10, 40);
 	ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 	ssd1306_UpdateScreen(&holedL);
+	
+	enum { STATE_LINE, STATE_HEADPHONE };
+	uint8_t state_now = STATE_LINE;
+	uint8_t state_next = STATE_LINE;
 	
   /* USER CODE END 2 */
 
@@ -249,37 +253,61 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		
-		newvolume_line = BSP_ReadEncoder(ENCODER_LEFT) % (0x1F+1);
-		
-		if(newvolume_line != volume_line){
-			volume_line = newvolume_line;
-			volume_line_dB = -34.5f + (1.5f*(float)volume_line);
-			TLV320_SetLineInVol(volume_line);
-			printf("[VOL] :\t%.1f dB\n", volume_line_dB);
-			sprintf(lcd_buf, "%.1f dB  ", volume_line_dB);
+		/* STATE MACHINE */
+		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
+		if(encoder_change){    // only execute when something changed
+			switch(state_now){
+				/* LINE OUT Volume */
+				case STATE_LINE:
+					volume_line += encoder_change;    // add the Encoder Difference to the Volume (positive or negative)
+					if(volume_line > 0x01f)           // Boundry Check
+						volume_line = 0x01f;
+					TLV320_SetLineInVol(volume_line); // Set the Volume on the Codec
+					// from -34.5dB to +12dB in 1.5 dB Steps
+					volume_dB = -34.5f + (1.5f*(float)volume_line);
+					printf("[VOL LIN]:\t%.1f dB\n", volume_dB);
+					break;
+				/* HEADPHONE Volume */
+				case STATE_HEADPHONE:
+					volume_hp += encoder_change;
+					if(volume_hp > 79)
+						volume_hp = 79;
+					TLV320_SetHeadphoneVol(volume_hp);
+					// from -73dB to +6dB in 1dB Steps
+					volume_dB = -73.0 + (1.0f*(float)volume_hp);
+					printf("[VOL HP] :\t%.1f dB\n", volume_dB);
+					break;
+				default:
+					state_next = STATE_LINE;
+			}
+			// Display new Value on 2nd line on OLED
+			sprintf(lcd_buf, "%.1f dB  ", volume_dB);
 			ssd1306_SetCursor(&holedL, 10, 40);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedL);
 		}
 		
+		/* LEFT USER BUTTON */
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
 			printf("[BTN] Button Left\n");
-			
 		}
+		/* RIGHT USER BUTTON */
 		if(btnRightPressed){
 			btnRightPressed= 0;
 			input_state = 1-input_state;
 			printf("[BTN] :\tButton Right\n");
+			
+			/* Switch Line Input between external Board and 3.5mm Jack */
 			if(input_state){
 				printf("[AUDIO] :\tExt Line\n");
-				BSP_SelectAudioIn(AUDIO_IN_EXT);
+				BSP_SelectAudioIn(AUDIO_IN_EXT);  // select external Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 				sprintf(lcd_buf, "EXT Line ");
 				
 			} else {
 				printf("[AUDIO] :\tLine In\n");
-				BSP_SelectAudioIn(AUDIO_IN_LINE);
+				BSP_SelectAudioIn(AUDIO_IN_LINE); // select Jack Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 				sprintf(lcd_buf, "Line IN  ");
 			}
@@ -288,27 +316,47 @@ int main(void)
 			ssd1306_UpdateScreen(&holedR);
 		}
 		
+		/* LEFT ENCODER BUTTON */
 		if(encLeftPressed){
 			encLeftPressed = 0;
 			printf("[BTN] :\tEncoder Left\n");
+			
+			/* Switch Volume Control State */
+			ssd1306_SetCursor(&holedL, 2, 20);
+			if(state_now == STATE_LINE){
+				state_next = STATE_HEADPHONE;
+				ssd1306_WriteString(&holedL, "HP   Vol", Font_11x18, White);
+				printf("[MODE]:\tHeadphone\n");
+				volume_dB = -73.0 + (1.0f*(float)volume_hp);
+			} else {
+				state_next = STATE_LINE;
+				ssd1306_WriteString(&holedL, "Line Vol", Font_11x18, White);
+				printf("[MODE]:\tLine\n");
+				volume_dB = -34.5f + (1.5f*(float)volume_line);
+			}
+			
+			sprintf(lcd_buf, "%.1f dB  ", volume_dB);
+			ssd1306_SetCursor(&holedL, 10, 40);
+			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
+			ssd1306_UpdateScreen(&holedL);
+			BSP_ReadEncoder_Difference(ENCODER_LEFT); // make sure delta is empty on state change
 		}
+		
+		/* RIGHT ENCODER BUTTON */
 		if(encRightPressed){
 			encRightPressed = 0;
 			printf("[BTN] :\tEncoder Right\n");
 		}
 		
+		/* do something every 1s without user interaction */
 		if(update_counter > 100){
-			/*
-			float bat_volt = 0.0f;
-			bat_volt = BSP_ReadBatteryVoltage(adc_val, 10);
-			printf("Battery: %.3f V\n", bat_volt);
-			*/
 			
 			update_counter = 0;
 		}
 		
 		HAL_Delay(10);
-		update_counter ++;
+		state_now = state_next;
+		
   }
   /* USER CODE END 3 */
 }

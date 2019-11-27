@@ -18,6 +18,8 @@ ssd1306_UpdateScreen(&holedL);
 
 
 
-
+float bat_volt = 0.0f;
+bat_volt = BSP_ReadBatteryVoltage(adc_val, 10);
+printf("Battery: %.3f V\n", bat_volt);
 
 

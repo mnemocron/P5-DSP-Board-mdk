@@ -266,6 +266,10 @@ void DMA1_Stream4_IRQHandler(void)
   /* USER CODE END DMA1_Stream4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi2_tx);
   /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
+	
+	/* DMA Transmit Complete */
+	// Copy Input Data Buffer to Output Data Buffer
+	// Implementing a passthrough functionality
 	for(uint8_t i=0; i<128; i++){
 		pTxData[i] = pRxData[i];
 	}
