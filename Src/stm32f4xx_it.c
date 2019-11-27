@@ -56,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_i2s2_ext_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern RNG_HandleTypeDef hrng;
@@ -63,6 +64,12 @@ extern RNG_HandleTypeDef hrng;
 extern volatile uint16_t sample_N;
 extern volatile uint16_t pTxData[128];
 extern volatile uint16_t pRxData[128];
+
+extern volatile uint8_t btnLeftPressed;
+extern volatile uint8_t btnRightPressed;
+extern volatile uint8_t encLeftPressed;
+extern volatile uint8_t encRightPressed;
+extern volatile uint8_t dmaTransferComplete;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -207,6 +214,9 @@ void SysTick_Handler(void)
 void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
+	// SW1 = right PA0 EXTI0
+	btnRightPressed ++;
+	// @TODO positive negative edge event
 
   /* USER CODE END EXTI0_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
@@ -221,6 +231,8 @@ void EXTI0_IRQHandler(void)
 void EXTI1_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI1_IRQn 0 */
+	// SW2 = left  PA1 EXTI1
+	btnLeftPressed ++;
 
   /* USER CODE END EXTI1_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
@@ -249,6 +261,7 @@ void DMA1_Stream3_IRQHandler(void)
 void DMA1_Stream4_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
+	dmaTransferComplete ++;
 
   /* USER CODE END DMA1_Stream4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi2_tx);
@@ -265,6 +278,17 @@ void DMA1_Stream4_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+	
+	
+		// ROT1 - right - PC12 - EXTI12
+		// ROT2 - left  - PB13 - EXTI13
+	
+	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_12)){
+		encRightPressed ++;
+	}
+	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_13)){
+		encLeftPressed ++;
+	}
 
   /* USER CODE END EXTI15_10_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);
@@ -272,6 +296,20 @@ void EXTI15_10_IRQHandler(void)
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA2 stream0 global interrupt.
+  */
+void DMA2_Stream0_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
+
+  /* USER CODE END DMA2_Stream0_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_adc1);
+  /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream0_IRQn 1 */
 }
 
 /**
