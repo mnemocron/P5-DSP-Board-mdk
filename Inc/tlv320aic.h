@@ -15,6 +15,10 @@
 #ifndef TLV320AIC_H
 #define	TLV320AIC_H
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
 #ifndef STM32F4XX_H
 #include "stm32f4xx_hal.h"
 #endif

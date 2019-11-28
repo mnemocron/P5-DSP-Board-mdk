@@ -29,6 +29,7 @@
 #include "ssd1306.h"
 #include "tlv320aic.h"
 #include "dsp_board_bsp.h"
+#include "dsp_processing.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,8 +69,8 @@ UART_HandleTypeDef huart1;
 SSD1306_t holedR;
 SSD1306_t holedL;
 
-uint16_t pTxData[128];
-uint16_t pRxData[128];
+uint16_t pTxData[DSP_BUFFERSIZE];
+uint16_t pRxData[DSP_BUFFERSIZE];
 uint16_t sinWave[256];
 
 uint32_t adc_val;
@@ -350,13 +351,22 @@ int main(void)
 		
 		/* do something every 1s without user interaction */
 		if(update_counter > 100){
-			
+			printf("[JACK] :\t[LIN]\t[MIC]\t[HP]\t[LOUT]\n");
+			uint8_t val = 0;
+			val = BSP_ReadJackConnected(JACK_LINE_IN);
+			printf("       :\t%d \t", val);
+			val = BSP_ReadJackConnected(JACK_MIC);
+			printf("%d \t", val);
+			val = BSP_ReadJackConnected(JACK_HEADPHONE);
+			printf("%d \t", val);
+			val = BSP_ReadJackConnected(JACK_LINE_OUT);
+			printf("%d \n", val);
 			update_counter = 0;
 		}
 		
 		HAL_Delay(10);
 		state_now = state_next;
-		
+		update_counter ++;
   }
   /* USER CODE END 3 */
 }

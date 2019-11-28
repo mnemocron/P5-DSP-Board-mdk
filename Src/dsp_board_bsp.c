@@ -23,6 +23,45 @@ EncoderValues_t henc2;
 
 extern ADC_HandleTypeDef hadc1;
 
+/* Read Jack Detect ----------------------------------------------------------*/
+uint8_t BSP_ReadJackConnected(JackType_t jack)
+{
+	uint8_t value = 0;
+	value = BSP_ReadJackPinState(jack);
+	
+	// MIC Detect Pin is ACTIVE LOW --> invert signal
+	if(jack == JACK_MIC){
+		if(value)
+			value = 0;
+		else
+			value = 1;
+	}
+	return value;
+}
+
+/* Read Jack Pin State -------------------------------------------------------*/
+GPIO_PinState BSP_ReadJackPinState(JackType_t jack)
+{
+	GPIO_PinState value = 0;
+	switch(jack){
+		case JACK_MIC:
+			value = HAL_GPIO_ReadPin(DTC_MIC_GPIO_Port, DTC_MIC_Pin);
+			break;
+		case JACK_HEADPHONE:
+			value = HAL_GPIO_ReadPin(DTC_HP_GPIO_Port, DTC_HP_Pin);
+			break;
+		case JACK_LINE_IN:
+			value = HAL_GPIO_ReadPin(DTC_LIN_GPIO_Port, DTC_LIN_Pin);
+			break;
+		case JACK_LINE_OUT:
+			value = HAL_GPIO_ReadPin(DTC_LOUT_GPIO_Port, DTC_LOUT_Pin);
+			break;
+		default:
+			break;
+	}
+	return value;
+}
+
 /* Read Battery Voltage ------------------------------------------------------*/
 /**
 * @ TODO : make this work with ADC / HAL / DMA

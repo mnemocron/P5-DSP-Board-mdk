@@ -1,46 +1,35 @@
-/**
-  ******************************************************************************
-  * @file    STM32F429_DSPDEMO/Inc/fir.h 
-  * @author  MCD Application Team
-  * @brief   Header for fir_processing.c module
-  ******************************************************************************
-  *
-  * COPYRIGHT(c) 2016 STMicroelectronics
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */
+/*******************************************************************************
+ * @file        dsp_processing.h
+ * @brief       C Library for processing the received datastream
+ * @details     
+ * @version     0.1
+ * @author      Simon Burkhardt
+ * @author      Mischa Studer
+ * @date        2019.11.28
+ * @copyright   (c) 2019 Fachhochschule Nordwestschweiz FHNW
+ *              all rights reserved
+ * @note        EIT Projekt 5 - HS19 - "DSP Board", Betreuer: Markus Hufschmid
+*******************************************************************************/
+
+/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __FIR_H
 #define __FIR_H
 /* Includes ------------------------------------------------------------------*/
-// #include "global.h"
+#include <arm_math.h>
 /* Private defines -----------------------------------------------------------*/
-#define TEST_LENGTH_SAMPLES             240
-#define BLOCK_SIZE                      32 
-#define NUM_TAPS                        29 
-#define NUM_FIR_TAPS_Q15                56 
-#define BLOCKSIZE                       32
+
+#define FIR_NUM_TAPS 29
+
+/* ----------------------------------------------------------------------
+** FIR Coefficients buffer generated using fir1() MATLAB function.
+** fir1(28, 6/24)
+** ------------------------------------------------------------------- */
+float32_t aFIR_F32_Coeffs[FIR_NUM_TAPS] = {
+-0.0018225230f, -0.0015879294f, +0.0000000000f, +0.0036977508f, +0.0080754303f, +0.0085302217f, -0.0000000000f, -0.0173976984f,
+-0.0341458607f, -0.0333591565f, +0.0000000000f, +0.0676308395f, +0.1522061835f, +0.2229246956f, +0.2504960933f, +0.2229246956f,
++0.1522061835f, +0.0676308395f, +0.0000000000f, -0.0333591565f, -0.0341458607f, -0.0173976984f, -0.0000000000f, +0.0085302217f,
++0.0080754303f, +0.0036977508f, +0.0000000000f, -0.0015879294f, -0.0018225230f
+};
 
 /* Exported functions ------------------------------------------------------- */
 void FIR_PROCESSING_F32Process(void);
@@ -50,7 +39,8 @@ void FIR_PROCESSING_Q15Process(int LP_or_HP);
 /* Private variables ---------------------------------------------------------*/
 
 
+#ifdef	__cplusplus
+}
+#endif
 
 #endif /* __FIR_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics ************************/

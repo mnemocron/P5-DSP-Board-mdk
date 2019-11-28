@@ -23,6 +23,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "dsp_processing.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,9 +62,9 @@ extern DMA_HandleTypeDef hdma_i2s2_ext_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern RNG_HandleTypeDef hrng;
 /* USER CODE BEGIN EV */
-extern volatile uint16_t sample_N;
-extern volatile uint16_t pTxData[128];
-extern volatile uint16_t pRxData[128];
+extern uint16_t sample_N;
+extern uint16_t pTxData[128];
+extern uint16_t pRxData[128];
 
 extern volatile uint8_t btnLeftPressed;
 extern volatile uint8_t btnRightPressed;
@@ -268,11 +269,17 @@ void DMA1_Stream4_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
 	
 	/* DMA Transmit Complete */
+	/* Call the DSP Processing Function to handle the data */
+	DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
+	
 	// Copy Input Data Buffer to Output Data Buffer
 	// Implementing a passthrough functionality
+	/*
 	for(uint8_t i=0; i<128; i++){
 		pTxData[i] = pRxData[i];
 	}
+	*/
+	
   /* USER CODE END DMA1_Stream4_IRQn 1 */
 }
 

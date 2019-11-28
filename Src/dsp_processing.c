@@ -7,121 +7,57 @@ Project Properties > C/C++ > Preprocessor Symbols: ARM_MATH_CM4
 #include "main.h"
 #include <arm_math.h>
 #include "fir.h"
+#include "dsp_processing.h"
 
-uint32_t blockSize = BLOCK_SIZE;
-uint32_t numBlocks = TEST_LENGTH_SAMPLES/BLOCK_SIZE;
+volatile uint16_t dsp_mode = DSP_MODE_GAIN;
 
-q31_t aFIR_Q31_1kHz_15kHz[TEST_LENGTH_SAMPLES];
-q15_t aFIR_Q15_1kHz_15kHz[TEST_LENGTH_SAMPLES];
-
-float32_t 	aFIR_F32_Output[TEST_LENGTH_SAMPLES];
-q15_t 			aFIR_Q15_Output[TEST_LENGTH_SAMPLES];
-q31_t 			aFIR_Q31_Output[TEST_LENGTH_SAMPLES];
-
-/* ----------------------------------------------------------------------
-** Test input signal contains 1000Hz + 15000 Hz
-** ------------------------------------------------------------------- */
-float32_t aFIR_F32_1kHz_15kHz[TEST_LENGTH_SAMPLES] =
+void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t size)
 {
-+0.0000000000f, +0.5924659585f, -0.0947343455f, +0.1913417162f, +1.0000000000f, +0.4174197128f, +0.3535533906f, +1.2552931065f,
-+0.8660254038f, +0.4619397663f, +1.3194792169f, +1.1827865776f, +0.5000000000f, +1.1827865776f, +1.3194792169f, +0.4619397663f,
-+0.8660254038f, +1.2552931065f, +0.3535533906f, +0.4174197128f, +1.0000000000f, +0.1913417162f, -0.0947343455f, +0.5924659585f,
--0.0000000000f, -0.5924659585f, +0.0947343455f, -0.1913417162f, -1.0000000000f, -0.4174197128f, -0.3535533906f, -1.2552931065f,
--0.8660254038f, -0.4619397663f, -1.3194792169f, -1.1827865776f, -0.5000000000f, -1.1827865776f, -1.3194792169f, -0.4619397663f,
--0.8660254038f, -1.2552931065f, -0.3535533906f, -0.4174197128f, -1.0000000000f, -0.1913417162f, +0.0947343455f, -0.5924659585f,
-+0.0000000000f, +0.5924659585f, -0.0947343455f, +0.1913417162f, +1.0000000000f, +0.4174197128f, +0.3535533906f, +1.2552931065f,
-+0.8660254038f, +0.4619397663f, +1.3194792169f, +1.1827865776f, +0.5000000000f, +1.1827865776f, +1.3194792169f, +0.4619397663f,
-+0.8660254038f, +1.2552931065f, +0.3535533906f, +0.4174197128f, +1.0000000000f, +0.1913417162f, -0.0947343455f, +0.5924659585f,
-+0.0000000000f, -0.5924659585f, +0.0947343455f, -0.1913417162f, -1.0000000000f, -0.4174197128f, -0.3535533906f, -1.2552931065f,
--0.8660254038f, -0.4619397663f, -1.3194792169f, -1.1827865776f, -0.5000000000f, -1.1827865776f, -1.3194792169f, -0.4619397663f,
--0.8660254038f, -1.2552931065f, -0.3535533906f, -0.4174197128f, -1.0000000000f, -0.1913417162f, +0.0947343455f, -0.5924659585f,
-+0.0000000000f, +0.5924659585f, -0.0947343455f, +0.1913417162f, +1.0000000000f, +0.4174197128f, +0.3535533906f, +1.2552931065f,
-+0.8660254038f, +0.4619397663f, +1.3194792169f, +1.1827865776f, +0.5000000000f, +1.1827865776f, +1.3194792169f, +0.4619397663f,
-+0.8660254038f, +1.2552931065f, +0.3535533906f, +0.4174197128f, +1.0000000000f, +0.1913417162f, -0.0947343455f, +0.5924659585f,
-+0.0000000000f, -0.5924659585f, +0.0947343455f, -0.1913417162f, -1.0000000000f, -0.4174197128f, -0.3535533906f, -1.2552931065f,
--0.8660254038f, -0.4619397663f, -1.3194792169f, -1.1827865776f, -0.5000000000f, -1.1827865776f, -1.3194792169f, -0.4619397663f,
--0.8660254038f, -1.2552931065f, -0.3535533906f, -0.4174197128f, -1.0000000000f, -0.1913417162f, +0.0947343455f, -0.5924659585f,
--0.0000000000f, +0.5924659585f, -0.0947343455f, +0.1913417162f, +1.0000000000f, +0.4174197128f, +0.3535533906f, +1.2552931065f,
-+0.8660254038f, +0.4619397663f, +1.3194792169f, +1.1827865776f, +0.5000000000f, +1.1827865776f, +1.3194792169f, +0.4619397663f,
-+0.8660254038f, +1.2552931065f, +0.3535533906f, +0.4174197128f, +1.0000000000f, +0.1913417162f, -0.0947343455f, +0.5924659585f,
--0.0000000000f, -0.5924659585f, +0.0947343455f, -0.1913417162f, -1.0000000000f, -0.4174197128f, -0.3535533906f, -1.2552931065f,
--0.8660254038f, -0.4619397663f, -1.3194792169f, -1.1827865776f, -0.5000000000f, -1.1827865776f, -1.3194792169f, -0.4619397663f,
--0.8660254038f, -1.2552931065f, -0.3535533906f, -0.4174197128f, -1.0000000000f, -0.1913417162f, +0.0947343455f, -0.5924659585f,
-+0.0000000000f, +0.5924659585f, -0.0947343455f, +0.1913417162f, +1.0000000000f, +0.4174197128f, +0.3535533906f, +1.2552931065f,
-+0.8660254038f, +0.4619397663f, +1.3194792169f, +1.1827865776f, +0.5000000000f, +1.1827865776f, +1.3194792169f, +0.4619397663f,
-+0.8660254038f, +1.2552931065f, +0.3535533906f, +0.4174197128f, +1.0000000000f, +0.1913417162f, -0.0947343455f, +0.5924659585f,
-+0.0000000000f, -0.5924659585f, +0.0947343455f, -0.1913417162f, -1.0000000000f, -0.4174197128f, -0.3535533906f, -1.2552931065f,
--0.8660254038f, -0.4619397663f, -1.3194792169f, -1.1827865776f, -0.5000000000f, -1.1827865776f, -1.3194792169f, -0.4619397663f,
--0.8660254038f, -1.2552931065f, -0.3535533906f, -0.4174197128f, -1.0000000000f, -0.1913417162f, +0.0947343455f, -0.5924659585f,
-};
+	
+	static float32_t rxLeft[DSP_BUFFERSIZE_HALF], rxRight[DSP_BUFFERSIZE_HALF];
+  static float32_t txLeft[DSP_BUFFERSIZE_HALF], txRight[DSP_BUFFERSIZE_HALF];
 
-/* ----------------------------------------------------------------------
-** FIR Coefficients buffer generated using fir1() MATLAB function.
-** fir1(28, 6/24)
-** ------------------------------------------------------------------- */
-float32_t aFIR_F32_Coeffs[NUM_TAPS] = {
--0.0018225230f, -0.0015879294f, +0.0000000000f, +0.0036977508f, +0.0080754303f, +0.0085302217f, -0.0000000000f, -0.0173976984f,
--0.0341458607f, -0.0333591565f, +0.0000000000f, +0.0676308395f, +0.1522061835f, +0.2229246956f, +0.2504960933f, +0.2229246956f,
-+0.1522061835f, +0.0676308395f, +0.0000000000f, -0.0333591565f, -0.0341458607f, -0.0173976984f, -0.0000000000f, +0.0085302217f,
-+0.0080754303f, +0.0036977508f, +0.0000000000f, -0.0015879294f, -0.0018225230f
-};
-
-/* ----------------------------------------------------------------------
-** low pass at 1KHz with 40dB at 1.5KHz for SR=16KHz.
-** ------------------------------------------------------------------- */
-q15_t aFIR_Q15_Coeffs_LP[NUM_FIR_TAPS_Q15] = {
--217	,   40	,  120,  237,  366,  475,  527,  490,  346,
-100		, -217	, -548, -818, -947, -864, -522,   86,  922,
-1904	, 2918	, 3835, 4529, 4903, 4903, 4529, 3835, 2918,
-1904	,  922	,   86, -522, -864, -947, -818, -548, -217,
-100		,  346	,  490,  527,  475,  366,  237,  120,   40,
--217	,    0	,    0,    0,    0,    0,    0,    0,    0,
-0,    0};
-
-/* ----------------------------------------------------------------------
-** high pass at 1.5KHz with 40dB at 1KHz for SR=16KHz
-** ------------------------------------------------------------------- */
-q15_t aFIR_Q15_Coeffs_HP[NUM_FIR_TAPS_Q15] = {
--654	,  483	,  393,  321,  222,   76, -108, -299, -447,
--501	, -422	, -200,  136,  520,  855, 1032,  953,  558,
--160	,-1148	,-2290,-3432,-4406,-5060,27477,-5060,-4406,
--3432	,-2290	,-1148, -160,  558,  953, 1032,  855,  520,
-136		, -200	, -422, -501, -447, -299, -108,   76,  222,
-321		,  393	,  483, -654,    0,    0,    0,    0,    0,
-0			,    0	,};
-
-/* -------------------------------------------------------------------
- * Declare State buffer of size (numTaps + blockSize - 1)
- * ------------------------------------------------------------------- */
-float32_t 	firStateF32[BLOCK_SIZE + NUM_TAPS - 1];
-q31_t 			firStateQ31[BLOCK_SIZE + NUM_TAPS - 1];
-q15_t 			firStateQ15[NUM_FIR_TAPS_Q15 + BLOCKSIZE];
-q31_t 		aFIR_Q31_Coeffs[NUM_TAPS];
-
-/**
-  * @brief  This function apply a LP FIR filter in to a F32 data signal.
-  * @param  None
-  * @retval None
-  */
-void FIR_PROCESSING_F32Process(void)
-{
-
-  arm_fir_instance_f32 FIR_F32_Struct;
-  uint32_t counter_FIR_f32_p;
-  static int counter_FIR_Ds;
-  static int counter_FIR_Dd;
-  int DataID = 1;
-  uint32_t duration_us = 0x00;
-  /* Call FIR init function to initialize the instance structure. */
-  arm_fir_init_f32(&FIR_F32_Struct, NUM_TAPS, (float32_t *)&aFIR_F32_Coeffs[0], &firStateF32[0], blockSize);
-
-  /* Call the FIR process function for every blockSize samples */
-  //TimerCount_Start();
-
-  for (counter_FIR_f32_p = 0; counter_FIR_f32_p < numBlocks; counter_FIR_f32_p++)
-  {
-    arm_fir_f32(&FIR_F32_Struct, aFIR_F32_1kHz_15kHz + (counter_FIR_f32_p * blockSize), aFIR_F32_Output + (counter_FIR_f32_p * blockSize), blockSize);
-  }
-
-  //TimerCount_Stop(nb_cycles);
+	// copy sourceBuffer to leftSignalBuffer and rightSignalBuffer
+	uint16_t index1, index2;
+	for (index1 = 0, index2 = 0; index1 < DSP_BUFFERSIZE_HALF; index1++) {
+			rxLeft[index1]  = (float32_t)sourceBuffer[index2++];
+			rxRight[index1] = (float32_t)sourceBuffer[index2++];
+	}
+	
+	float32_t gain = 2.0f;
+	switch(dsp_mode){
+		case DSP_MODE_FIR:
+			break;
+		case DSP_MODE_GAIN:
+			// Add a gain of +6dB (gain = 2)
+		  /** @Bug : The Codec internal gain works by changing the digital values.
+				*        Adding too much gain both here and on the Codec makes the uint16_t values overflow
+				*        changing the signal. */
+			gain = 2.0f;
+			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
+					txLeft[i] = gain*rxLeft[i];
+			}
+			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
+					txRight[i] = gain*rxRight[i];
+			}
+			break;
+		case DSP_MODE_PASSTHROUGH:
+		default: // DSP_MODE_PASSTHROUGH
+			//talk through: just copy input (rx) into output (tx) 
+			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
+					txLeft[i] = rxLeft[i];
+			}
+			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
+					txRight[i] = rxRight[i];
+			}
+			break;
+	}
+	
+	//copy left and right txBuffer into targetBuffer
+	for (index1 = 0, index2 = 0; index1 < DSP_BUFFERSIZE_HALF; index1++) {
+			targetBuffer[index2++] = (uint16_t)txLeft[index1];
+			targetBuffer[index2++] = (uint16_t)txRight[index1];
+	}
 }
+
+

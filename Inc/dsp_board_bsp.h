@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * @file        dsp_board_bsp.h
  * @brief       C Library for Board spesific functionalities (BSP)
@@ -17,10 +16,10 @@
 #ifndef __DSP_BOARD_BSP_H
 #define __DSP_BOARD_BSP_H
 
-#ifdef __cplusplus
- extern "C" {
+#ifdef	__cplusplus
+extern "C" {
 #endif
-                                              
+
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_i2c.h"
@@ -99,6 +98,13 @@ typedef enum {
 	CHARGE_CURRENT_500MA
 } ChargeCurrent_t;
 
+typedef enum {
+	JACK_MIC,
+	JACK_HEADPHONE,
+	JACK_LINE_IN,
+	JACK_LINE_OUT
+} JackType_t;
+
 typedef struct {
 	uint16_t value;
 	 int16_t delta;
@@ -112,6 +118,8 @@ uint16_t BSP_ReadEncoder(EncoderPosition_t);
 int16_t BSP_ReadEncoder_Difference(EncoderPosition_t);
 void BSP_SetBatteryCurrent(ChargeCurrent_t);
 float BSP_ReadBatteryVoltage(uint16_t*, uint8_t);
+uint8_t BSP_ReadJackConnected(JackType_t);
+GPIO_PinState BSP_ReadJackPinState(JackType_t);
 
 #ifdef __cplusplus
 }
