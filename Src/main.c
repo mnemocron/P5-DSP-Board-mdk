@@ -81,6 +81,7 @@ volatile uint8_t encLeftPressed = 0;
 volatile uint8_t encRightPressed = 0;
 volatile uint8_t dmaTransferComplete = 0;
 
+extern volatile uint16_t dsp_mode;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -212,7 +213,7 @@ int main(void)
 		pTxData[i] = 0;
 	}
 	/* Start automatic DMA Transmission (Full Duplex) */
-	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, 128);
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE);
 	printf(".");
   
 	/* Set the Analog Signal Switch to choose LINE IN as Input */
@@ -292,7 +293,12 @@ int main(void)
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
 			printf("[BTN] Button Left\n");
+			if(dsp_mode == DSP_MODE_FIR)
+				dsp_mode = DSP_MODE_PASSTHROUGH;
+			else 
+				dsp_mode = DSP_MODE_FIR;
 		}
+		
 		/* RIGHT USER BUTTON */
 		if(btnRightPressed){
 			btnRightPressed= 0;

@@ -270,6 +270,10 @@ void DMA1_Stream4_IRQHandler(void)
 	
 	/* DMA Transmit Complete */
 	/* Call the DSP Processing Function to handle the data */
+	
+	/**
+  * @Bug Do not execute this Code in ISR: Fir Filter is BLOCKING !!
+	*/
 	DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
 	
 	// Copy Input Data Buffer to Output Data Buffer

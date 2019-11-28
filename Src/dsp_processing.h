@@ -1,6 +1,6 @@
 /*******************************************************************************
- * @file        fir.h
- * @brief       C Library to process FIR Filters using CMSIS/DSP
+ * @file        dsp_processing.h
+ * @brief       C Library for processing the received datastream
  * @details     
  * @version     0.1
  * @author      Simon Burkhardt
@@ -12,23 +12,35 @@
 *******************************************************************************/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __FIR_H
-#define __FIR_H
+#ifndef __DSP_PROCESSING_H
+#define __DSP_PROCESSING_H
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+	
 /* Includes ------------------------------------------------------------------*/
-#include <arm_math.h>
+#include "main.h"
+
 /* Private defines -----------------------------------------------------------*/
+#define DSP_BLOCK_SIZE 32
+#define DSP_BUFFERSIZE 256
+#define DSP_BUFFERSIZE_HALF 128
 
-#define FIR_NUM_TAPS 29
-#define FIR_BLOCK_SIZE 32
+enum {
+	DSP_MODE_PASSTHROUGH,
+	DSP_MODE_FIR,
+	DSP_MODE_IIR,
+	DSP_MODE_GAIN
+};
 
-/* Exported functions ------------------------------------------------------- */
-void FIR_PROCESSING_F32Process(float32_t*, float32_t*, float32_t*, float32_t*);
 
-/* Private variables ---------------------------------------------------------*/
-
+void DSP_Process_Data(uint16_t *, uint16_t *, uint16_t);
 
 #ifdef	__cplusplus
 }
 #endif
 
-#endif /* __FIR_H */
+#endif // __DSP_PROCESSING_H
+
+
