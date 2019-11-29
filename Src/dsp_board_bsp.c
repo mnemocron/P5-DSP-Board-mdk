@@ -42,7 +42,7 @@ uint8_t BSP_ReadJackConnected(JackType_t jack)
 /* Read Jack Pin State -------------------------------------------------------*/
 GPIO_PinState BSP_ReadJackPinState(JackType_t jack)
 {
-	GPIO_PinState value = 0;
+	GPIO_PinState value = GPIO_PIN_RESET;
 	switch(jack){
 		case JACK_MIC:
 			value = HAL_GPIO_ReadPin(DTC_MIC_GPIO_Port, DTC_MIC_Pin);
@@ -66,19 +66,23 @@ GPIO_PinState BSP_ReadJackPinState(JackType_t jack)
 /**
 * @ TODO : make this work with ADC / HAL / DMA
 	*/
-float BSP_ReadBatteryVoltage(uint16_t* values, uint8_t size)
+float BSP_ReadBatteryVoltage(uint8_t n)
 {
 	uint32_t sum = 0;
-	for(uint8_t i=0; i<size; i++){
-		HAL_ADC_Start(&hadc1);
+	HAL_ADC_Start(&hadc1);
+	uint8_t avg = 0;
+	
+	for(uint8_t i=0; i<n; i++){
+		if(HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK){
+			sum += HAL_ADC_GetValue(&hadc1);
+			avg ++;
+		}
 	}
-	for(uint8_t i=0; i<size; i++){
-		sum += (uint32_t)values[i];
-	}
-	sum /= (uint32_t)size;
+	sum /= (uint32_t)avg;
 	// 4096 = 3.3V
 	// 1 = 3.3/4096;
-	return 0.733333f * (float)(sum) * (3.3f/4096.0f);  // 4.5V correction factor = 0.7333
+	// 4.5V correction factor = 0.7333 from Voltage Divider
+	return 0.733333f * (float)(sum) * (3.3f/4096.0f);  
 }
 
 /* Set max Battery Charge Current --------------------------------------------*/

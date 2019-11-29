@@ -117,7 +117,7 @@ void BSP_SelectAudioIn(uint8_t);
 uint16_t BSP_ReadEncoder(EncoderPosition_t);
 int16_t BSP_ReadEncoder_Difference(EncoderPosition_t);
 void BSP_SetBatteryCurrent(ChargeCurrent_t);
-float BSP_ReadBatteryVoltage(uint16_t*, uint8_t);
+float BSP_ReadBatteryVoltage(uint8_t n);
 uint8_t BSP_ReadJackConnected(JackType_t);
 GPIO_PinState BSP_ReadJackPinState(JackType_t);
 

@@ -49,7 +49,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c3;
@@ -72,8 +71,6 @@ SSD1306_t holedL;
 uint16_t pTxData[DSP_BUFFERSIZE];
 uint16_t pRxData[DSP_BUFFERSIZE];
 uint16_t sinWave[256];
-
-uint32_t adc_val;
 
 volatile uint8_t btnLeftPressed = 0;
 volatile uint8_t btnRightPressed = 0;
@@ -171,10 +168,11 @@ int main(void)
 	printf("DSP Board!\n");
 	printf("Initializing.");
 	
-	/* Start ADC over DMA for Battery Voltage */
-	/* @TODO figure out how to ADC with DMA */
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_val, 1);
-	HAL_ADC_Start(&hadc1);  // manually trigger one conversation
+	/* Start ADC for Battery Voltage */
+	HAL_ADC_Start(&hadc1);
+	if(HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK){
+		HAL_ADC_GetValue(&hadc1);
+	}
 	printf(".");
 	
 	/* Set up SSD1306 OLED Displays on both I2C Busses */
@@ -254,6 +252,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		float volt = BSP_ReadBatteryVoltage(10);
+		printf("%.3f\n", volt);
 		
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
@@ -293,10 +293,6 @@ int main(void)
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
 			printf("[BTN] Button Left\n");
-			if(dsp_mode == DSP_MODE_FIR)
-				dsp_mode = DSP_MODE_PASSTHROUGH;
-			else 
-				dsp_mode = DSP_MODE_FIR;
 		}
 		
 		/* RIGHT USER BUTTON */
@@ -353,10 +349,22 @@ int main(void)
 		if(encRightPressed){
 			encRightPressed = 0;
 			printf("[BTN] :\tEncoder Right\n");
+			if(dsp_mode == DSP_MODE_FIR){
+				dsp_mode = DSP_MODE_PASSTHROUGH;
+				sprintf(lcd_buf, "Passthru");
+			} else {
+				dsp_mode = DSP_MODE_FIR;
+				sprintf(lcd_buf, "FIR     ");
+			}
+			ssd1306_SetCursor(&holedR, 10, 0);
+			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
+			ssd1306_UpdateScreen(&holedR);
 		}
 		
 		/* do something every 1s without user interaction */
 		if(update_counter > 100){
+			update_counter = 0;
+			
 			printf("[JACK] :\t[LIN]\t[MIC]\t[HP]\t[LOUT]\n");
 			uint8_t val = 0;
 			val = BSP_ReadJackConnected(JACK_LINE_IN);
@@ -367,7 +375,13 @@ int main(void)
 			printf("%d \t", val);
 			val = BSP_ReadJackConnected(JACK_LINE_OUT);
 			printf("%d \n", val);
-			update_counter = 0;
+			
+			float volt = BSP_ReadBatteryVoltage(10);
+			printf("[VBAT]: %.3f V", volt);
+			sprintf(lcd_buf, "%.2f V  ", volt);
+			ssd1306_SetCursor(&holedL, 50, 0);
+			ssd1306_WriteString(&holedL, lcd_buf, Font_7x10, White);
+			ssd1306_UpdateScreen(&holedL);
 		}
 		
 		HAL_Delay(10);
@@ -448,16 +462,16 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
@@ -744,7 +758,6 @@ static void MX_DMA_Init(void)
 {
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
-  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Stream3_IRQn interrupt configuration */
@@ -753,9 +766,6 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
-  /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 

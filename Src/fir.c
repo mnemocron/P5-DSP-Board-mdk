@@ -26,11 +26,30 @@ static float32_t firStateF32_R[FIR_BLOCK_SIZE + FIR_NUM_TAPS - 1];
 ** FIR Coefficients buffer generated using fir1() MATLAB function.
 ** fir1(28, 6/24)
 ** ------------------------------------------------------------------- */
-const float32_t firCoeffs32[FIR_NUM_TAPS] = {
+
+const float32_t firCoeffs32_long[29] = {
   -0.0018225230f, -0.0015879294f, +0.0000000000f, +0.0036977508f, +0.0080754303f, +0.0085302217f, -0.0000000000f, -0.0173976984f,
   -0.0341458607f, -0.0333591565f, +0.0000000000f, +0.0676308395f, +0.1522061835f, +0.2229246956f, +0.2504960933f, +0.2229246956f,
   +0.1522061835f, +0.0676308395f, +0.0000000000f, -0.0333591565f, -0.0341458607f, -0.0173976984f, -0.0000000000f, +0.0085302217f,
   +0.0080754303f, +0.0036977508f, +0.0000000000f, -0.0015879294f, -0.0018225230f
+};
+
+/* ----------------------------------------------------------------------
+** FIR Coefficients buffer generated using fir1() MATLAB function.
+** fir1(10, 6/24)
+** ------------------------------------------------------------------- */
+const float32_t firCoeffs32[FIR_NUM_TAPS] = {
+	-0.003871323167475,
+   0.000000000000000,
+   0.032087799410030,
+   0.116708621643743,
+   0.220701186106900,
+   0.268747432013603,
+   0.220701186106900,
+   0.116708621643743,
+   0.032087799410030,
+   0.000000000000000,
+  -0.003871323167475
 };
 /* ------------------------------------------------------------------
  * Global variables for FIR LPF Example
@@ -52,7 +71,7 @@ void FIR_PROCESSING_F32Process(float32_t *pSrc1, float32_t *pDst1, float32_t *pS
 
 	/* Call FIR init function to initialize the instance structure. */
   arm_fir_init_f32(&FIR_F32_Struct_L, FIR_NUM_TAPS, (float32_t *)&firCoeffs32[0], &firStateF32_L[0], blockSize);
-  arm_fir_init_f32(&FIR_F32_Struct_R, FIR_NUM_TAPS, (float32_t *)&firCoeffs32[0], &firStateF32_R[0], blockSize);
+  arm_fir_init_f32(&FIR_F32_Struct_R, 29, (float32_t *)&firCoeffs32_long[0], &firStateF32_R[0], blockSize);
   /* ----------------------------------------------------------------------
   ** Call the FIR process function for every blockSize samples
   ** ------------------------------------------------------------------- */
