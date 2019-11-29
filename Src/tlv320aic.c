@@ -3,7 +3,7 @@
  * @brief       C Library for TLV320aic Audio Codec
  * @details     This file implements the functionalities of the codec. 
  *              The public functions can be used to control the codec.
- * @version     0.1
+ * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
  * @date        2019.10.09

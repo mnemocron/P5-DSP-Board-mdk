@@ -3,7 +3,7 @@
  * @brief       C Library for TLV320aic Audio Codec
  * @details     This file implements the functionalities of the codec. 
  *              The public functions can be used to control the codec.
- * @version     0.1
+ * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
  * @date        2019.10.09
@@ -79,11 +79,13 @@ void TLV320_SetMicboost(uint8_t boost);
 /**
  * Sets the line input volume.
  * @param vol   should be a value between 0x1F=12dB and 0x00=-34.5dB (1.5 dB steps)
+ * @bug Probably Bug? When setting the Volume to 0x1F, Codec is muted
  */
 void TLV320_SetLineInVol(uint16_t vol);
 /**
  * Sets the headphone output volume.
  * @param vol   should be a value between 0x4F=6dB and 0x00=-73dB (79 steps)
+ * @bug Probably Bug? When setting the Volume to 0x4f Codec is muted
  */
 void TLV320_SetHeadphoneVol(uint16_t vol);
 

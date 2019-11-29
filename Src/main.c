@@ -252,8 +252,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		float volt = BSP_ReadBatteryVoltage(10);
-		printf("%.3f\n", volt);
 		
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);

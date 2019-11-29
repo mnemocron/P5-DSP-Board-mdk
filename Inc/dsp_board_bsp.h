@@ -3,7 +3,7 @@
  * @brief       C Library for Board spesific functionalities (BSP)
  * @details     This file contains definitions for FHNW P5 DSP Board LEDs,
  *              push-buttons hardware resources.
- * @version     0.1
+ * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
  * @date        2019.11.27
@@ -110,16 +110,16 @@ typedef struct {
 	 int16_t delta;
 } EncoderValues_t;
 
-void BSP_I2C_ScanAddresses(I2C_HandleTypeDef*);
-void BSP_Print_to_Matlab(uint16_t*, uint16_t);
-uint16_t BSP_SineWave(float, float, uint16_t, uint16_t*, uint16_t);
-void BSP_SelectAudioIn(uint8_t);
-uint16_t BSP_ReadEncoder(EncoderPosition_t);
-int16_t BSP_ReadEncoder_Difference(EncoderPosition_t);
-void BSP_SetBatteryCurrent(ChargeCurrent_t);
-float BSP_ReadBatteryVoltage(uint8_t n);
-uint8_t BSP_ReadJackConnected(JackType_t);
-GPIO_PinState BSP_ReadJackPinState(JackType_t);
+void     BSP_I2C_ScanAddresses     (I2C_HandleTypeDef*);
+void     BSP_Print_to_Matlab       (uint16_t*, uint16_t);
+uint16_t BSP_SineWave              (float, float, uint16_t, uint16_t*, uint16_t);
+void     BSP_SelectAudioIn         (uint8_t);
+uint16_t BSP_ReadEncoder           (EncoderPosition_t);
+int16_t  BSP_ReadEncoder_Difference(EncoderPosition_t);
+void     BSP_SetBatteryCurrent     (ChargeCurrent_t);
+float    BSP_ReadBatteryVoltage    (uint8_t n);
+uint8_t  BSP_ReadJackConnected     (JackType_t);
+GPIO_PinState BSP_ReadJackPinState (JackType_t);
 
 #ifdef __cplusplus
 }
