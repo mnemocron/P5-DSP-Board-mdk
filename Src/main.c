@@ -71,7 +71,22 @@ SSD1306_t holedL;
 
 uint16_t pTxData[DSP_BUFFERSIZE];
 uint16_t pRxData[DSP_BUFFERSIZE];
+uint16_t pDSPData[DSP_BUFFERSIZE];
 uint16_t sinWave[256];
+
+// three alternating buffers
+uint16_t pTxRxData_A[DSP_BUFFERSIZE];
+uint16_t pTxRxData_B[DSP_BUFFERSIZE];
+uint16_t pTxRxData_C[DSP_BUFFERSIZE];
+uint16_t pTxRxData_D[DSP_BUFFERSIZE];
+
+// a Merry go Around for the three buffers, containing the pointer to the first element
+volatile uint16_t* buffer_merry_go_around[4] = {pTxRxData_A, pTxRxData_B, pTxRxData_C, pTxRxData_D};
+volatile uint8_t pDataIndex_Rx  = 3;
+volatile uint8_t pDataIndex_DSP_in  = 2;   // increment to get Rx buffer
+volatile uint8_t pDataIndex_DSP_out = 1;   // 
+volatile uint8_t pDataIndex_Tx  = 0;   // increment to get DSP buffer
+volatile uint8_t newDataReadyFlag = 0; // ISR Flag to main
 
 uint32_t adc_val;
 
@@ -188,7 +203,7 @@ int main(void)
 	ssd1306_Init(&holedR);
 	ssd1306_Fill(&holedR, Black);
 	ssd1306_SetCursor(&holedR, 2, 20);
-	ssd1306_WriteString(&holedR, "Input", Font_11x18, White);
+	ssd1306_WriteString(&holedR, "Passthru", Font_11x18, White);
 	ssd1306_UpdateScreen(&holedR);
 	printf(".");
 	
@@ -208,12 +223,13 @@ int main(void)
 	printf(".");
 	
 	/* Clear Audio Rx and Tx buffer for DMA */
-	for(uint8_t i=0; i<128; i++){
+	for(uint16_t i=0; i<DSP_BUFFERSIZE; i++){
 		pRxData[i] = 0;
 		pTxData[i] = 0;
 	}
 	/* Start automatic DMA Transmission (Full Duplex) */
-	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE);
+	// HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE);
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, (uint16_t*)buffer_merry_go_around[pDataIndex_Tx], (uint16_t*)buffer_merry_go_around[pDataIndex_Rx], DSP_BUFFERSIZE);
 	printf(".");
   
 	/* Set the Analog Signal Switch to choose LINE IN as Input */
@@ -245,6 +261,11 @@ int main(void)
 	uint8_t state_now = STATE_LINE;
 	uint8_t state_next = STATE_LINE;
 	
+	pDataIndex_Rx = 3;
+	pDataIndex_DSP_in = 2;
+	pDataIndex_DSP_out = 1;
+	pDataIndex_Tx = 0;
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -254,6 +275,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		/* Use MAIN Loop to process buffered Data */
+		if(newDataReadyFlag){
+			newDataReadyFlag = 0;
+			/*
+			pDataIndex_Rx = (pDataIndex_Rx+1) % 4;
+			pDataIndex_Tx = (pDataIndex_Tx+1) % 4;
+			pDataIndex_DSP_in = (pDataIndex_DSP_in+1) % 4;
+			pDataIndex_DSP_out = (pDataIndex_DSP_out+1) % 4;
+			*/
+			// HAL_I2SEx_TransmitReceive_DMA(&hi2s2, (uint16_t*)buffer_merry_go_around[pDataIndex_Tx], (uint16_t*)buffer_merry_go_around[pDataIndex_Rx], DSP_BUFFERSIZE);
+			DSP_Process_Data((uint16_t*)buffer_merry_go_around[pDataIndex_DSP_in], (uint16_t*)buffer_merry_go_around[pDataIndex_DSP_out], DSP_BLOCK_SIZE);
+			printf("r:%d i:%d o: %d t:%d\n", pDataIndex_Rx, pDataIndex_DSP_in, pDataIndex_DSP_out, pDataIndex_Tx);
+		}
 		
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
@@ -293,10 +327,16 @@ int main(void)
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
 			printf("[BTN] Button Left\n");
-			if(dsp_mode == DSP_MODE_FIR)
+			if(dsp_mode == DSP_MODE_FIR){
 				dsp_mode = DSP_MODE_PASSTHROUGH;
-			else 
+				sprintf(lcd_buf, "Passthru");
+		  } else {
 				dsp_mode = DSP_MODE_FIR;
+				sprintf(lcd_buf, "FIR     ");
+			}
+			ssd1306_SetCursor(&holedR, 2, 20);
+			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
+			ssd1306_UpdateScreen(&holedR);
 		}
 		
 		/* RIGHT USER BUTTON */
@@ -356,6 +396,7 @@ int main(void)
 		}
 		
 		/* do something every 1s without user interaction */
+		/*
 		if(update_counter > 100){
 			printf("[JACK] :\t[LIN]\t[MIC]\t[HP]\t[LOUT]\n");
 			uint8_t val = 0;
@@ -369,8 +410,9 @@ int main(void)
 			printf("%d \n", val);
 			update_counter = 0;
 		}
+		*/
 		
-		HAL_Delay(10);
+		//HAL_Delay(10);
 		state_now = state_next;
 		update_counter ++;
   }

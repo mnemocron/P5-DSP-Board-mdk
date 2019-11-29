@@ -35,7 +35,7 @@ enum {
 };
 
 
-void DSP_Process_Data(uint16_t *, uint16_t *, uint16_t);
+void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t);
 
 #ifdef	__cplusplus
 }

@@ -63,14 +63,24 @@ extern DMA_HandleTypeDef hdma_spi2_tx;
 extern RNG_HandleTypeDef hrng;
 /* USER CODE BEGIN EV */
 extern uint16_t sample_N;
-extern uint16_t pTxData[128];
-extern uint16_t pRxData[128];
+extern uint16_t pTxData[DSP_BUFFERSIZE];
+extern uint16_t pRxData[DSP_BUFFERSIZE];
 
 extern volatile uint8_t btnLeftPressed;
 extern volatile uint8_t btnRightPressed;
 extern volatile uint8_t encLeftPressed;
 extern volatile uint8_t encRightPressed;
 extern volatile uint8_t dmaTransferComplete;
+
+
+extern volatile uint16_t* buffer_merry_go_around[4];
+extern volatile uint8_t pDataIndex_Rx;
+extern volatile uint8_t pDataIndex_DSP_in;
+extern volatile uint8_t pDataIndex_DSP_out;
+extern volatile uint8_t pDataIndex_Tx;
+extern volatile uint8_t newDataReadyFlag;
+
+extern I2S_HandleTypeDef hi2s2;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -267,6 +277,15 @@ void DMA1_Stream4_IRQHandler(void)
   /* USER CODE END DMA1_Stream4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi2_tx);
   /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
+	HAL_I2S_DMAStop(&hi2s2);
+	pDataIndex_Rx = (pDataIndex_Rx+1) % 4;
+	pDataIndex_Tx = (pDataIndex_Tx+1) % 4;
+	pDataIndex_DSP_in = (pDataIndex_DSP_in+1) % 4;
+	pDataIndex_DSP_out = (pDataIndex_DSP_out+1) % 4;
+	
+	HAL_I2S_DMAStop(&hi2s2);
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, (uint16_t*)buffer_merry_go_around[pDataIndex_Tx], (uint16_t*)buffer_merry_go_around[pDataIndex_Rx], DSP_BUFFERSIZE);
+	newDataReadyFlag ++;
 	
 	/* DMA Transmit Complete */
 	/* Call the DSP Processing Function to handle the data */
@@ -274,12 +293,14 @@ void DMA1_Stream4_IRQHandler(void)
 	/**
   * @Bug Do not execute this Code in ISR: Fir Filter is BLOCKING !!
 	*/
-	DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
+	// DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
 	
 	// Copy Input Data Buffer to Output Data Buffer
 	// Implementing a passthrough functionality
 	/*
-	for(uint8_t i=0; i<128; i++){
+	// this is the only code that works
+	// copying two arrays already takes too long
+	for(uint16_t i=0; i<DSP_BUFFERSIZE; i++){
 		pTxData[i] = pRxData[i];
 	}
 	*/
