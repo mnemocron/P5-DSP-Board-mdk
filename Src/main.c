@@ -206,7 +206,7 @@ int main(void)
 	printf(".");
 	
 	/* Clear Audio Rx and Tx buffer for DMA */
-	for(uint8_t i=0; i<128; i++){
+	for(uint16_t i=0; i<DSP_BUFFERSIZE; i++){
 		pRxData[i] = 0;
 		pTxData[i] = 0;
 	}

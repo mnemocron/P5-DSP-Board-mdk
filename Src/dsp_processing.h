@@ -27,6 +27,11 @@ extern "C" {
 #define DSP_BUFFERSIZE 256
 #define DSP_BUFFERSIZE_HALF 128
 
+typedef struct {
+	uint16_t pTxData[DSP_BUFFERSIZE],
+	uint16_t pRxData[DSP_BUFFERSIZE]
+} DSPBuffer_t;
+
 enum {
 	DSP_MODE_PASSTHROUGH,
 	DSP_MODE_FIR,
@@ -35,7 +40,7 @@ enum {
 };
 
 
-void DSP_Process_Data(uint16_t *, uint16_t *, uint16_t);
+void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t size);
 
 #ifdef	__cplusplus
 }

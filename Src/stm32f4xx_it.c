@@ -61,9 +61,10 @@ extern DMA_HandleTypeDef hdma_i2s2_ext_rx;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern RNG_HandleTypeDef hrng;
 /* USER CODE BEGIN EV */
+extern I2S_HandleTypeDef hi2s2;
 extern uint16_t sample_N;
-extern uint16_t pTxData[128];
-extern uint16_t pRxData[128];
+extern uint16_t pTxData[DSP_BUFFERSIZE];
+extern uint16_t pRxData[DSP_BUFFERSIZE];
 
 extern volatile uint8_t btnLeftPressed;
 extern volatile uint8_t btnRightPressed;
