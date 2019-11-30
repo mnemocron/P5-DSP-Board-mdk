@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define DEBUG_COMMENT
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -71,6 +71,9 @@ SSD1306_t holedL;
 uint16_t pTxData[DSP_BUFFERSIZE];
 uint16_t pRxData[DSP_BUFFERSIZE];
 uint16_t sinWave[256];
+
+DSPBuffer_t DMA_Buffer[2];
+volatile uint8_t buf_index = 0;
 
 volatile uint8_t btnLeftPressed = 0;
 volatile uint8_t btnRightPressed = 0;
@@ -201,7 +204,7 @@ int main(void)
 	TLV320_Init(&hi2c1);
 	TLV320_Mute(0);       // mute off
 	TLV320_SetInput(LINE);
-	TLV320_SetLineInVol(0x01F);
+	TLV320_SetLineInVol(0x00F);
 	TLV320_SetHeadphoneVol(0x04F);
 	printf(".");
 	
@@ -211,7 +214,7 @@ int main(void)
 		pTxData[i] = 0;
 	}
 	/* Start automatic DMA Transmission (Full Duplex) */
-	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE);
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, DMA_Buffer[buf_index].pTxData, DMA_Buffer[buf_index].pRxData, DSP_BUFFERSIZE);
 	printf(".");
   
 	/* Set the Analog Signal Switch to choose LINE IN as Input */
@@ -252,7 +255,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		if(dmaTransferComplete){
+			dmaTransferComplete=0;
+			DSP_Process_Data(DMA_Buffer[1-buf_index].pRxData, DMA_Buffer[1-buf_index].pTxData, DSP_BLOCK_SIZE);
+		}
 		
+		#ifndef DEBUG_COMMENT
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
 		if(encoder_change){    // only execute when something changed
@@ -381,8 +389,9 @@ int main(void)
 			ssd1306_WriteString(&holedL, lcd_buf, Font_7x10, White);
 			ssd1306_UpdateScreen(&holedL);
 		}
+		#endif
 		
-		HAL_Delay(10);
+		// HAL_Delay(10);
 		state_now = state_next;
 		update_counter ++;
   }

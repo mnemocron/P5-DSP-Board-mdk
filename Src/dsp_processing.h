@@ -28,8 +28,8 @@ extern "C" {
 #define DSP_BUFFERSIZE_HALF 128
 
 typedef struct {
-	uint16_t pTxData[DSP_BUFFERSIZE],
-	uint16_t pRxData[DSP_BUFFERSIZE]
+	uint16_t pTxData[DSP_BUFFERSIZE];
+	uint16_t pRxData[DSP_BUFFERSIZE];
 } DSPBuffer_t;
 
 enum {

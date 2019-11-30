@@ -66,6 +66,9 @@ extern uint16_t sample_N;
 extern uint16_t pTxData[DSP_BUFFERSIZE];
 extern uint16_t pRxData[DSP_BUFFERSIZE];
 
+extern DSPBuffer_t DMA_Buffer[2];
+extern volatile uint8_t buf_index;
+
 extern volatile uint8_t btnLeftPressed;
 extern volatile uint8_t btnRightPressed;
 extern volatile uint8_t encLeftPressed;
@@ -274,7 +277,10 @@ void DMA1_Stream4_IRQHandler(void)
 	/**
   * @Bug Do not execute this Code in ISR: FIR Filter is BLOCKING !!
 	*/
-	DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
+	// DSP_Process_Data(DMA_Buffer[buf_index].pRxData, DMA_Buffer[buf_index].pTxData, DSP_BLOCK_SIZE);
+	HAL_I2S_DMAStop(&hi2s2);
+	buf_index = 1-buf_index;
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, DMA_Buffer[buf_index].pTxData, DMA_Buffer[buf_index].pRxData, DSP_BUFFERSIZE);
 	
 	// Copy Input Data Buffer to Output Data Buffer
 	// Implementing a passthrough functionality
