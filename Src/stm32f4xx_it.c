@@ -272,23 +272,13 @@ void DMA1_Stream4_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
 	
 	/* DMA Transmit Complete */
-	/* Call the DSP Processing Function to handle the data */
 	
-	/**
-  * @Bug Do not execute this Code in ISR: FIR Filter is BLOCKING !!
-	*/
-	// DSP_Process_Data(DMA_Buffer[buf_index].pRxData, DMA_Buffer[buf_index].pTxData, DSP_BLOCK_SIZE);
-	HAL_I2S_DMAStop(&hi2s2);
-	buf_index = 1-buf_index;
+	// HAL_I2S_DMAStop(&hi2s2);
+	// buf_index = 1-buf_index;   // change to next buffer
+	/** 
+	  * @bug changing the index makes the audio sound like every other buffer is empty 
+	  */
 	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, DMA_Buffer[buf_index].pTxData, DMA_Buffer[buf_index].pRxData, DSP_BUFFERSIZE);
-	
-	// Copy Input Data Buffer to Output Data Buffer
-	// Implementing a passthrough functionality
-	/*
-	for(uint16_t i=0; i<DSP_BLOCK_SIZE; i++){
-		pTxData[i] = pRxData[i];
-	}
-	*/
 	
   /* USER CODE END DMA1_Stream4_IRQn 1 */
 }

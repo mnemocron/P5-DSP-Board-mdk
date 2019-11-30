@@ -257,10 +257,13 @@ int main(void)
     /* USER CODE BEGIN 3 */
 		if(dmaTransferComplete){
 			dmaTransferComplete=0;
-			DSP_Process_Data(DMA_Buffer[1-buf_index].pRxData, DMA_Buffer[1-buf_index].pTxData, DSP_BLOCK_SIZE);
+			DSP_Process_Data(DMA_Buffer[buf_index].pRxData, DMA_Buffer[buf_index].pTxData, DSP_BLOCK_SIZE);
 		}
 		
-		#ifndef DEBUG_COMMENT
+		// dsp_mode = DSP_MODE_FIR;
+		
+/* COMMENT OUT THE GUI STATE MACHINE */
+#ifndef DEBUG_COMMENT
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
 		if(encoder_change){    // only execute when something changed
@@ -389,7 +392,7 @@ int main(void)
 			ssd1306_WriteString(&holedL, lcd_buf, Font_7x10, White);
 			ssd1306_UpdateScreen(&holedL);
 		}
-		#endif
+#endif
 		
 		// HAL_Delay(10);
 		state_now = state_next;
