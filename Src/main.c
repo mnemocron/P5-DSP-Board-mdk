@@ -168,6 +168,13 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 	
+	/* If User Button is pressed on Startup, enter DFU Firmware Upgrade Mode */
+	if(HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == GPIO_PIN_SET){
+		HAL_GPIO_WritePin(SET_BOOT0_GPIO_Port, SET_BOOT0_Pin, GPIO_PIN_SET);  // pull BOOT0 = 1
+		HAL_Delay(500);      // wait for Capacitor to charge to ~3.3V
+		NVIC_SystemReset();  // Reset the MCU
+	}
+	
 	printf("DSP Board!\n");
 	
 	/* Start ADC for Battery Voltage */

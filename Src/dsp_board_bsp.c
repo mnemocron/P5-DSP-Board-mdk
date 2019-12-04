@@ -92,7 +92,7 @@ float BSP_ReadBatteryVoltage(uint8_t n)
 	// 4096 = 3.3V
 	// 1 = 3.3/4096;
 	// 4.5V correction factor = 0.7333 from Voltage Divider
-	return 0.733333f * (float)(sum) * (3.3f/4096.0f);  
+	return (float)(sum) * (3.3f/4096.0f) / 0.73333333f;  
 }
 
 /* Set max Battery Charge Current --------------------------------------------*/
