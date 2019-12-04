@@ -316,7 +316,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     hdma_i2s2_ext_rx.Init.Mode = DMA_CIRCULAR;
     hdma_i2s2_ext_rx.Init.Priority = DMA_PRIORITY_HIGH;
     hdma_i2s2_ext_rx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    hdma_i2s2_ext_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+    hdma_i2s2_ext_rx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
     hdma_i2s2_ext_rx.Init.MemBurst = DMA_MBURST_SINGLE;
     hdma_i2s2_ext_rx.Init.PeriphBurst = DMA_PBURST_SINGLE;
     if (HAL_DMA_Init(&hdma_i2s2_ext_rx) != HAL_OK)
@@ -337,7 +337,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     hdma_spi2_tx.Init.Mode = DMA_CIRCULAR;
     hdma_spi2_tx.Init.Priority = DMA_PRIORITY_HIGH;
     hdma_spi2_tx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    hdma_spi2_tx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+    hdma_spi2_tx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
     hdma_spi2_tx.Init.MemBurst = DMA_MBURST_SINGLE;
     hdma_spi2_tx.Init.PeriphBurst = DMA_PBURST_SINGLE;
     if (HAL_DMA_Init(&hdma_spi2_tx) != HAL_OK)

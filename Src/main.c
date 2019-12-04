@@ -30,6 +30,7 @@
 #include "tlv320aic.h"
 #include "dsp_board_bsp.h"
 #include "dsp_processing.h"
+#include "fir.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,6 +40,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+// #define ENABLE_PRINTF
 
 /* USER CODE END PD */
 
@@ -68,8 +70,8 @@ UART_HandleTypeDef huart1;
 SSD1306_t holedR;
 SSD1306_t holedL;
 
-uint16_t pTxData[DSP_BUFFERSIZE];
-uint16_t pRxData[DSP_BUFFERSIZE];
+uint16_t pTxData[DSP_BUFFERSIZE_DOUBLE];
+uint16_t pRxData[DSP_BUFFERSIZE_DOUBLE];
 uint16_t sinWave[256];
 
 volatile uint8_t btnLeftPressed = 0;
@@ -79,6 +81,7 @@ volatile uint8_t encRightPressed = 0;
 volatile uint8_t dmaTransferComplete = 0;
 
 extern volatile uint16_t dsp_mode;
+extern volatile uint32_t buffer_offset;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -166,14 +169,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	
 	printf("DSP Board!\n");
-	printf("Initializing.");
 	
 	/* Start ADC for Battery Voltage */
 	HAL_ADC_Start(&hadc1);
 	if(HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK){
 		HAL_ADC_GetValue(&hadc1);
 	}
-	printf(".");
 	
 	/* Set up SSD1306 OLED Displays on both I2C Busses */
 	holedR.hi2cx = &hi2c3;
@@ -188,14 +189,12 @@ int main(void)
 	ssd1306_SetCursor(&holedR, 2, 20);
 	ssd1306_WriteString(&holedR, "Input", Font_11x18, White);
 	ssd1306_UpdateScreen(&holedR);
-	printf(".");
 	
 	/* Start both Timers in Encoder Mode for Rotary Encoders */
 	HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); // start encoder mode
 	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1);
 	TIM3->CNT = 0; // initialize zero
 	TIM4->CNT = 0;
-	printf(".");
 
 	/* Init TLV320 Audio Codec */
 	TLV320_Init(&hi2c1);
@@ -203,16 +202,12 @@ int main(void)
 	TLV320_SetInput(LINE);
 	TLV320_SetLineInVol(0x01F);
 	TLV320_SetHeadphoneVol(0x04F);
-	printf(".");
 	
 	/* Clear Audio Rx and Tx buffer for DMA */
-	for(uint16_t i=0; i<DSP_BUFFERSIZE; i++){
+	for(uint16_t i=0; i<DSP_BUFFERSIZE_DOUBLE; i++){
 		pRxData[i] = 0;
 		pTxData[i] = 0;
 	}
-	/* Start automatic DMA Transmission (Full Duplex) */
-	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE);
-	printf(".");
   
 	/* Set the Analog Signal Switch to choose LINE IN as Input */
 	BSP_SelectAudioIn(AUDIO_IN_LINE);
@@ -220,17 +215,15 @@ int main(void)
 	ssd1306_WriteString(&holedR, "Line IN  ", Font_11x18, White);
 	ssd1306_UpdateScreen(&holedR);
 	
-	printf("\ndone!\n");
-	
 	/* Generate a 1kHz Sine Wave */
 	uint16_t nDataPoints = BSP_SineWave(48000.0f, 1000.0f, 1000, sinWave, sizeof(sinWave)/sizeof(uint16_t));
-	BSP_Print_to_Matlab(sinWave, nDataPoints*2);
+	// BSP_Print_to_Matlab(sinWave, nDataPoints*2);
 	
 	uint8_t input_state = 0;
 	uint8_t update_counter = 0;
 	
 	uint16_t volume_line = 0, volume_hp = 0;
-	float volume_dB = -34.5f;
+	float volume_dB = -34.5f -6.0f;  // -6dB by input voltage divider
 	uint8_t newvolume_line = BSP_ReadEncoder(ENCODER_LEFT) % (0x1F+1);
 	
 	char lcd_buf[18];
@@ -243,6 +236,12 @@ int main(void)
 	uint8_t state_now = STATE_LINE;
 	uint8_t state_next = STATE_LINE;
 	
+	FIR_Init_Mono();
+	FIR_Init_Stereo();
+	/* Start automatic DMA Transmission (Full Duplex) */
+	/* Double buffer length, Interrupt on Half-Full */
+	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE_DOUBLE);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -252,6 +251,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		HAL_Delay(10);
+		state_now = state_next;
+		update_counter ++;
 		
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
@@ -263,9 +265,11 @@ int main(void)
 					if(volume_line > 0x01f)           // Boundry Check
 						volume_line = 0x01f;
 					TLV320_SetLineInVol(volume_line); // Set the Volume on the Codec
-					// from -34.5dB to +12dB in 1.5 dB Steps
-					volume_dB = -34.5f + (1.5f*(float)volume_line);
+					// from -34.5dB to +12dB in 1.5 dB Steps  (-6.0dB from input divider)
+					volume_dB = -34.5f -6.0f + (1.5f*(float)volume_line);
+#ifdef ENABLE_PRINTF
 					printf("[VOL LIN]:\t%.1f dB\n", volume_dB);
+#endif
 					break;
 				/* HEADPHONE Volume */
 				case STATE_HEADPHONE:
@@ -274,8 +278,10 @@ int main(void)
 						volume_hp = 79;
 					TLV320_SetHeadphoneVol(volume_hp);
 					// from -73dB to +6dB in 1dB Steps
-					volume_dB = -73.0 + (1.0f*(float)volume_hp);
+					volume_dB = -73.0 -6.0f + (1.0f*(float)volume_hp);
+#ifdef ENABLE_PRINTF
 					printf("[VOL HP] :\t%.1f dB\n", volume_dB);
+#endif
 					break;
 				default:
 					state_next = STATE_LINE;
@@ -290,24 +296,32 @@ int main(void)
 		/* LEFT USER BUTTON */
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
+#ifdef ENABLE_PRINTF
 			printf("[BTN] Button Left\n");
+#endif
 		}
 		
 		/* RIGHT USER BUTTON */
 		if(btnRightPressed){
 			btnRightPressed= 0;
 			input_state = 1-input_state;
+#ifdef ENABLE_PRINTF
 			printf("[BTN] :\tButton Right\n");
+#endif
 			
 			/* Switch Line Input between external Board and 3.5mm Jack */
 			if(input_state){
+#ifdef ENABLE_PRINTF
 				printf("[AUDIO] :\tExt Line\n");
+#endif
 				BSP_SelectAudioIn(AUDIO_IN_EXT);  // select external Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 				sprintf(lcd_buf, "EXT Line ");
 				
 			} else {
+#ifdef ENABLE_PRINTF
 				printf("[AUDIO] :\tLine In\n");
+#endif
 				BSP_SelectAudioIn(AUDIO_IN_LINE); // select Jack Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 				sprintf(lcd_buf, "Line IN  ");
@@ -320,19 +334,25 @@ int main(void)
 		/* LEFT ENCODER BUTTON */
 		if(encLeftPressed){
 			encLeftPressed = 0;
+#ifdef ENABLE_PRINTF
 			printf("[BTN] :\tEncoder Left\n");
+#endif
 			
 			/* Switch Volume Control State */
 			ssd1306_SetCursor(&holedL, 2, 20);
 			if(state_now == STATE_LINE){
 				state_next = STATE_HEADPHONE;
 				ssd1306_WriteString(&holedL, "HP   Vol", Font_11x18, White);
+#ifdef ENABLE_PRINTF
 				printf("[MODE]:\tHeadphone\n");
+#endif
 				volume_dB = -73.0 + (1.0f*(float)volume_hp);
 			} else {
 				state_next = STATE_LINE;
 				ssd1306_WriteString(&holedL, "Line Vol", Font_11x18, White);
+#ifdef ENABLE_PRINTF
 				printf("[MODE]:\tLine\n");
+#endif
 				volume_dB = -34.5f + (1.5f*(float)volume_line);
 			}
 			
@@ -346,7 +366,9 @@ int main(void)
 		/* RIGHT ENCODER BUTTON */
 		if(encRightPressed){
 			encRightPressed = 0;
+#ifdef ENABLE_PRINTF
 			printf("[BTN] :\tEncoder Right\n");
+#endif
 			if(dsp_mode == DSP_MODE_FIR){
 				dsp_mode = DSP_MODE_PASSTHROUGH;
 				sprintf(lcd_buf, "Passthru");
@@ -360,9 +382,9 @@ int main(void)
 		}
 		
 		/* do something every 1s without user interaction */
-		if(update_counter > 100){
+		if(update_counter > 0xfe){
 			update_counter = 0;
-			
+#ifdef ENABLE_PRINTF
 			printf("[JACK] :\t[LIN]\t[MIC]\t[HP]\t[LOUT]\n");
 			uint8_t val = 0;
 			val = BSP_ReadJackConnected(JACK_LINE_IN);
@@ -373,18 +395,18 @@ int main(void)
 			printf("%d \t", val);
 			val = BSP_ReadJackConnected(JACK_LINE_OUT);
 			printf("%d \n", val);
+#endif
 			
 			float volt = BSP_ReadBatteryVoltage(10);
+#ifdef ENABLE_PRINTF
 			printf("[VBAT]: %.3f V", volt);
+#endif
 			sprintf(lcd_buf, "%.2f V  ", volt);
 			ssd1306_SetCursor(&holedL, 50, 0);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_7x10, White);
 			ssd1306_UpdateScreen(&holedL);
 		}
 		
-		HAL_Delay(10);
-		state_now = state_next;
-		update_counter ++;
   }
   /* USER CODE END 3 */
 }

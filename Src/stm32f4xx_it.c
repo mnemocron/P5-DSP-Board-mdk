@@ -43,7 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+volatile uint32_t buffer_offset = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -248,10 +248,22 @@ void EXTI1_IRQHandler(void)
 void DMA1_Stream3_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream3_IRQn 0 */
+	/* DMA STREAM 3 is I2S2 RX complete */
+	dmaTransferComplete ++;
+	// HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 
   /* USER CODE END DMA1_Stream3_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_i2s2_ext_rx);
   /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
+	// arm_fir_f32() is called in this function
+	DSP_Process_Data( (pRxData + buffer_offset), (pTxData + buffer_offset), DSP_BUFFERSIZE);
+	
+	if(!buffer_offset)
+		buffer_offset = DSP_BUFFERSIZE;
+	else
+		buffer_offset = 0;
+	
+	// HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 
   /* USER CODE END DMA1_Stream3_IRQn 1 */
 }
@@ -262,27 +274,14 @@ void DMA1_Stream3_IRQHandler(void)
 void DMA1_Stream4_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
-	dmaTransferComplete ++;
+	/* DMA STREAM 4 is SPI2 TX complete */
 
   /* USER CODE END DMA1_Stream4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi2_tx);
   /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
 	
-	/* DMA Transmit Complete */
-	/* Call the DSP Processing Function to handle the data */
-	
-	/**
-  * @Bug Do not execute this Code in ISR: FIR Filter is BLOCKING !!
-	*/
-	DSP_Process_Data(pRxData, pTxData, DSP_BLOCK_SIZE);
-	
-	// Copy Input Data Buffer to Output Data Buffer
-	// Implementing a passthrough functionality
-	/*
-	for(uint16_t i=0; i<DSP_BLOCK_SIZE; i++){
-		pTxData[i] = pRxData[i];
-	}
-	*/
+	/* DMA Buffer is HALF full */
+	/* use first half for Processing */
 	
   /* USER CODE END DMA1_Stream4_IRQn 1 */
 }
