@@ -17,6 +17,7 @@ uint32_t debug = 0;
 void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t size)
 {
 	
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	static float32_t rxLeft[DSP_BUFFERSIZE_HALF], rxRight[DSP_BUFFERSIZE_HALF];
   static float32_t txLeft[DSP_BUFFERSIZE_HALF], txRight[DSP_BUFFERSIZE_HALF];
 
@@ -30,12 +31,14 @@ void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t s
 	float32_t gain = 2.0f;
 	switch(dsp_mode){
 		case DSP_MODE_FIR:
-			FIR_PROCESSING_F32Process(rxLeft, txLeft, rxRight, txRight);
-		  /*
+			FIR_Filter_F32_Mono(rxRight, txRight);
+			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
+					txLeft[i] = rxLeft[i];
+			}
+			/*
 			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
 					txRight[i] = rxRight[i];
-			}
-		  */
+			}*/
 			break;
 		case DSP_MODE_GAIN:
 			// Add a gain of +6dB (gain = 2)
@@ -59,6 +62,9 @@ void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t s
 			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {
 					txRight[i] = rxRight[i];
 			}
+			for(uint16_t a=0;a<0xfff;a++){
+				__NOP;
+			}
 			break;
 	}
 	
@@ -72,6 +78,7 @@ void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t s
 			printf("%d \t %f\n", (int16_t)(txLeft[index1]), (txLeft[index1]) );
 		*/
 	}
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 	
 	if(debug > 10000) debug = 0;
 	

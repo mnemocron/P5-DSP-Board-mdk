@@ -24,12 +24,13 @@ extern "C" {
 
 /* Private defines -----------------------------------------------------------*/
 #define DSP_BLOCK_SIZE 32
-#define DSP_BUFFERSIZE 256
-#define DSP_BUFFERSIZE_HALF 128
+#define DSP_BUFFERSIZE 128
+#define DSP_BUFFERSIZE_HALF 64
+#define DSP_BUFFERSIZE_DOUBLE 256
 
 typedef struct {
-	uint16_t pTxData[DSP_BUFFERSIZE],
-	uint16_t pRxData[DSP_BUFFERSIZE]
+	uint16_t pTxData[DSP_BUFFERSIZE];
+	uint16_t pRxData[DSP_BUFFERSIZE];
 } DSPBuffer_t;
 
 enum {

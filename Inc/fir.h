@@ -18,12 +18,16 @@
 #include <arm_math.h>
 /* Private defines -----------------------------------------------------------*/
 
-#define FIR_NUM_TAPS 29
+#define FIR_NUM_TAPS_LONG 29
+#define FIR_NUM_TAPS 11
 #define FIR_BLOCK_SIZE 32
 
 /* Exported functions ------------------------------------------------------- */
-void FIR_PROCESSING_F32Process(float32_t*, float32_t*, float32_t*, float32_t*);
+void FIR_Filter_F32_Stereo(float32_t *srcLeft, float32_t *dstLeft, float32_t *srcRight, float32_t *dstRight);
+void FIR_Filter_F32_Mono(float32_t* srcM, float32_t* dstM);
 
+void FIR_Init_Mono(void);
+void FIR_Init_Stereo(void);
 /* Private variables ---------------------------------------------------------*/
 
 
