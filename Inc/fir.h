@@ -18,18 +18,16 @@
 #include <arm_math.h>
 /* Private defines -----------------------------------------------------------*/
 
-#define FIR_NUM_TAPS_LONG 29
-#define FIR_NUM_TAPS 11
-#define FIR_BLOCK_SIZE 64
+#define FIR_NUM_TAPS_MONO    29  // Anzahl Filterkoeffizienten
+#define FIR_NUM_TAPS_STEREO  11  // Anzahl Filterkoeffizienten
+#define FIR_BLOCK_SIZE DSP_BUFFERSIZE_HALF // Anzahl zu verarbeitende Samples 
 
-/* Exported functions ------------------------------------------------------- */
+/* Private Function Prototypes -----------------------------------------------*/
 void FIR_Filter_F32_Stereo(float32_t *srcLeft, float32_t *dstLeft, float32_t *srcRight, float32_t *dstRight);
 void FIR_Filter_F32_Mono(float32_t* srcM, float32_t* dstM);
 
 void FIR_Init_Mono(void);
 void FIR_Init_Stereo(void);
-/* Private variables ---------------------------------------------------------*/
-
 
 #ifdef	__cplusplus
 }

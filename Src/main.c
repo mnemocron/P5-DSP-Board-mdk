@@ -223,7 +223,7 @@ int main(void)
 	uint8_t update_counter = 0;
 	
 	uint16_t volume_line = 0, volume_hp = 0;
-	float volume_dB = -34.5f;
+	float volume_dB = -34.5f -6.0f;  // -6dB by input voltage divider
 	uint8_t newvolume_line = BSP_ReadEncoder(ENCODER_LEFT) % (0x1F+1);
 	
 	char lcd_buf[18];
@@ -236,20 +236,12 @@ int main(void)
 	uint8_t state_now = STATE_LINE;
 	uint8_t state_next = STATE_LINE;
 	
-	printf("DMA Buffer start: 0x%08x\thalf: 0x%08x\tend: 0x%08x\n", &pRxData[0], &pRxData[DSP_BUFFERSIZE_HALF-1], &pRxData[DSP_BUFFERSIZE-1]);
-	printf("DMA Buffer start: 0x%08x\thalf: 0x%08x\tend: 0x%08x\n", &pTxData[0], &pTxData[DSP_BUFFERSIZE_HALF-1], &pTxData[DSP_BUFFERSIZE-1]);
-	printf("offset address: 0x%08x\n", (pRxData + DSP_BUFFERSIZE_HALF-1));
-	printf("offset address: 0x%08x\n", (pTxData + DSP_BUFFERSIZE_HALF-1));
-	volume_line = 0x018;
-	TLV320_SetLineInVol(volume_line);
-	
 	FIR_Init_Mono();
 	FIR_Init_Stereo();
 	/* Start automatic DMA Transmission (Full Duplex) */
+	/* Double buffer length, Interrupt on Half-Full */
 	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE_DOUBLE);
-	// HAL_DMAEx_MultiBufferStart(&hdma_spi2_tx, pTxData, 
 	
-	dsp_mode = DSP_MODE_FIR;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -259,16 +251,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
 		HAL_Delay(10);
 		state_now = state_next;
 		update_counter ++;
-		
-		/*
-		if(dmaTransferComplete){
-			dmaTransferComplete=0;
-			DSP_Process_Data( (pRxData + buffer_offset), (pTxData + buffer_offset), DSP_BUFFERSIZE);
-		} */
 		
 		/* STATE MACHINE */
 		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
@@ -280,8 +265,8 @@ int main(void)
 					if(volume_line > 0x01f)           // Boundry Check
 						volume_line = 0x01f;
 					TLV320_SetLineInVol(volume_line); // Set the Volume on the Codec
-					// from -34.5dB to +12dB in 1.5 dB Steps
-					volume_dB = -34.5f + (1.5f*(float)volume_line);
+					// from -34.5dB to +12dB in 1.5 dB Steps  (-6.0dB from input divider)
+					volume_dB = -34.5f -6.0f + (1.5f*(float)volume_line);
 #ifdef ENABLE_PRINTF
 					printf("[VOL LIN]:\t%.1f dB\n", volume_dB);
 #endif
@@ -293,7 +278,7 @@ int main(void)
 						volume_hp = 79;
 					TLV320_SetHeadphoneVol(volume_hp);
 					// from -73dB to +6dB in 1dB Steps
-					volume_dB = -73.0 + (1.0f*(float)volume_hp);
+					volume_dB = -73.0 -6.0f + (1.0f*(float)volume_hp);
 #ifdef ENABLE_PRINTF
 					printf("[VOL HP] :\t%.1f dB\n", volume_dB);
 #endif

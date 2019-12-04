@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @file        dsp_processing.h
- * @brief       C Library for processing the received datastream
+ * @brief       C Library for processing the incomming datastream
  * @details     
- * @version     0.1
+ * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
  * @date        2019.11.28
@@ -18,14 +18,22 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-	
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
 /* Private defines -----------------------------------------------------------*/
 #define DSP_BLOCK_SIZE 32
-#define DSP_BUFFERSIZE 256
-#define DSP_BUFFERSIZE_HALF 128
+#define DSP_BUFFERSIZE 128
+#define DSP_BUFFERSIZE_HALF 64
+#define DSP_BUFFERSIZE_DOUBLE 256
+// #define DEBUG_DSP_LATENCY   // enable to toggle LED to measure latency
+
+/* Private Typedefs ----------------------------------------------------------*/
+typedef struct {
+	uint16_t pTxData[DSP_BUFFERSIZE];
+	uint16_t pRxData[DSP_BUFFERSIZE];
+} DSPBuffer_t;
 
 enum {
 	DSP_MODE_PASSTHROUGH,
@@ -34,8 +42,8 @@ enum {
 	DSP_MODE_GAIN
 };
 
-
-void DSP_Process_Data(uint16_t *, uint16_t *, uint16_t);
+/* Private Function Prototypes -----------------------------------------------*/
+void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t size);
 
 #ifdef	__cplusplus
 }
