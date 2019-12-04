@@ -22,7 +22,7 @@
  * ------------------------------------------------------------------- */
 static float32_t firStateF32_L[FIR_BLOCK_SIZE + FIR_NUM_TAPS - 1];
 static float32_t firStateF32_R[FIR_BLOCK_SIZE + FIR_NUM_TAPS - 1];
-static float32_t firStateF32_Mono[FIR_BLOCK_SIZE + FIR_NUM_TAPS - 1];
+static float32_t firStateF32_Mono[FIR_BLOCK_SIZE + FIR_NUM_TAPS_LONG - 1];
 /* ----------------------------------------------------------------------
 ** FIR Coefficients buffer generated using fir1() MATLAB function.
 ** fir1(28, 6/24)
@@ -56,7 +56,7 @@ const float32_t firCoeffs32[FIR_NUM_TAPS] = {
  * Global variables for FIR LPF Example
  * ------------------------------------------------------------------- */
 uint32_t blockSize = FIR_BLOCK_SIZE;
-uint32_t numBlocks = DSP_BUFFERSIZE_HALF/FIR_BLOCK_SIZE;
+uint32_t numBlocks = DSP_BUFFERSIZE_HALF;
 float32_t  snr;
 
 
@@ -75,7 +75,7 @@ arm_fir_instance_f32 FIR_F32_Struct_Mono;
 
 void FIR_Init_Mono(void)
 {
-	arm_fir_init_f32(&FIR_F32_Struct_L, FIR_NUM_TAPS_LONG, (float32_t *)&firCoeffs32_long[0], &firStateF32_L[0], blockSize);
+	arm_fir_init_f32(&FIR_F32_Struct_Mono, FIR_NUM_TAPS_LONG, (float32_t *)&firCoeffs32_long[0], &firStateF32_Mono[0], blockSize);
 }
 
 /**
@@ -97,7 +97,6 @@ void FIR_Filter_F32_Stereo(float32_t *srcLeft, float32_t *dstLeft, float32_t *sr
 }
 
 void FIR_Filter_F32_Mono(float32_t* srcM, float32_t* dstM){
-	uint32_t i;
-  arm_fir_f32(&FIR_F32_Struct_L, srcM + (i * blockSize), dstM + (i * blockSize), blockSize);
+  arm_fir_f32(&FIR_F32_Struct_Mono, srcM, dstM, blockSize);
 }
 

@@ -20,7 +20,7 @@
 
 #define FIR_NUM_TAPS_LONG 29
 #define FIR_NUM_TAPS 11
-#define FIR_BLOCK_SIZE 32
+#define FIR_BLOCK_SIZE 64
 
 /* Exported functions ------------------------------------------------------- */
 void FIR_Filter_F32_Stereo(float32_t *srcLeft, float32_t *dstLeft, float32_t *srcRight, float32_t *dstRight);

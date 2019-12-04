@@ -249,7 +249,7 @@ int main(void)
 	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE_DOUBLE);
 	// HAL_DMAEx_MultiBufferStart(&hdma_spi2_tx, pTxData, 
 	
-	
+	dsp_mode = DSP_MODE_FIR;
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -264,7 +264,7 @@ void DMA1_Stream3_IRQHandler(void)
 	*/
 	
 	if(!buffer_offset)
-		buffer_offset = DSP_BUFFERSIZE-1;
+		buffer_offset = DSP_BUFFERSIZE;
 	else
 		buffer_offset = 0;
 	
