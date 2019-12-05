@@ -256,7 +256,7 @@ void DMA1_Stream3_IRQHandler(void)
   HAL_DMA_IRQHandler(&hdma_i2s2_ext_rx);
   /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
 	// arm_fir_f32() is called in this function
-	DSP_Process_Data( (pRxData + buffer_offset), (pTxData + buffer_offset), DSP_BUFFERSIZE);
+	DSP_Process_Data( (pRxData + buffer_offset), (pTxData + buffer_offset));
 	
 	if(!buffer_offset)
 		buffer_offset = DSP_BUFFERSIZE;

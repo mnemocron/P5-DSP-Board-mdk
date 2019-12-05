@@ -408,11 +408,6 @@
               <FilePath>..\Src\ssd1306_fonts.c</FilePath>
             </File>
             <File>
-              <FileName>ssd1306_tests.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\ssd1306_tests.c</FilePath>
-            </File>
-            <File>
               <FileName>tlv320aic.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\tlv320aic.c</FilePath>
@@ -441,6 +436,11 @@
               <FileName>stm32f4xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/stm32f4xx_hal_msp.c</FilePath>
+            </File>
+            <File>
+              <FileName>adaptive_fir.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\adaptive_fir.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -5,7 +5,7 @@
  * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
- * @date        2019.11.28
+ * @date        2019.12.05
  * @copyright   (c) 2019 Fachhochschule Nordwestschweiz FHNW
  *              all rights reserved
  * @note        EIT Projekt 5 - HS19 - "DSP Board", Betreuer: Markus Hufschmid
@@ -19,14 +19,38 @@ Project Properties > Target > Floating Point Hardware > "Single Precision"
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <arm_math.h>
-#include "fir.h"
 #include "dsp_processing.h"
+#include "fir.h"
+#include "adaptive_fir.h"
+#include <arm_math.h>
 #include <stdio.h>
 
-volatile uint16_t dsp_mode;
+/* Global Variables ----------------------------------------------------------*/
+volatile uint16_t dsp_mode = DSP_MODE_PASSTHROUGH;
 
-void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t size)
+/* Private Functions ---------------------------------------------------------*/
+/**
+  * @param fg new -3dB Cuttoff Frequency of the FIR Low Pass Filter
+	*/
+void DSP_Update_Adaptive_FIR(float fg)
+{
+	float32_t new_coeffs[FIR_NUM_TAPS_ADAPTIVE];
+	fir1(FIR_NUM_TAPS_ADAPTIVE, fg/48000.0f, new_coeffs);
+	FIR_Update_Adaptive(new_coeffs, FIR_NUM_TAPS_ADAPTIVE);
+	printf("x = [");
+	for(uint16_t i = 0; i < FIR_NUM_TAPS_ADAPTIVE; i++){
+		if(i) printf(", ");  // print colon prior to value for i>0
+		printf("%.3f", new_coeffs[i]);  // @TODO: is this correct dereference ?
+	}
+	printf(" ];\n");
+	printf("plot(x); grid on;\n\n");
+}
+
+/**
+  * @param sourceBuffer Pointer to the Audio Signal Source Buffer (from DMA ISR)
+  * @param targetBuffer Pointer to the Audio Signal Destination Buffer (to DMA)
+  */
+void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer)
 {
 #ifdef DEBUG_DSP_LATENCY
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
@@ -43,7 +67,12 @@ void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer, uint16_t s
 	
 	float32_t gain = 2.0f;
 	switch(dsp_mode){
+		case DSP_MODE_FIR_ADAPTIVE:
+			// use the FIR Filter with variable -3dB Frequency
+			FIR_Filter_F32_Adaptive(rxLeft, txLeft, rxRight, txRight);
+			break;
 		case DSP_MODE_FIR:
+			// use one of the two avilable FIR Filters (Mono or Stereo)
 			/*
 			FIR_Filter_F32_Mono(rxRight, txRight);
 			for (uint16_t i = 0; i < DSP_BUFFERSIZE_HALF; i++) {

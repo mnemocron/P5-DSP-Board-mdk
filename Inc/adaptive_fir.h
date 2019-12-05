@@ -1,7 +1,7 @@
 /*******************************************************************************
- * @file        dsp_processing.h
- * @brief       C Library for processing the incomming datastream
- * @details     
+ * @file        adaptive_fir.h
+ * @brief       C Library to derrive FIR low pass coefficients
+ * @details     Uses Windowing approach (sin(x)/(x))
  * @version     1.0
  * @author      Simon Burkhardt
  * @author      Mischa Studer
@@ -9,11 +9,12 @@
  * @copyright   (c) 2019 Fachhochschule Nordwestschweiz FHNW
  *              all rights reserved
  * @note        EIT Projekt 5 - HS19 - "DSP Board", Betreuer: Markus Hufschmid
+ * @see         http://www.labbookpages.co.uk/audio/firWindowing.html
 *******************************************************************************/
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __DSP_PROCESSING_H
-#define __DSP_PROCESSING_H
+#ifndef __ADAPTIVE_FIR_H
+#define __ADAPTIVE_FIR_H
 
 #ifdef	__cplusplus
 extern "C" {
@@ -21,36 +22,23 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
-/* Private defines -----------------------------------------------------------*/
-#define DSP_BLOCK_SIZE 32
-#define DSP_BUFFERSIZE 128
-#define DSP_BUFFERSIZE_HALF 64
-#define DSP_BUFFERSIZE_DOUBLE 256
-#define DEBUG_DSP_LATENCY   // enable to toggle LED to measure latency
+#include <math.h>
 
 /* Private Typedefs ----------------------------------------------------------*/
-typedef struct {
-	uint16_t pTxData[DSP_BUFFERSIZE];
-	uint16_t pRxData[DSP_BUFFERSIZE];
-} DSPBuffer_t;
-
-enum {
-	DSP_MODE_PASSTHROUGH,
-	DSP_MODE_FIR,
-	DSP_MODE_IIR,
-	DSP_MODE_GAIN,
-	DSP_MODE_FIR_ADAPTIVE
-};
+typedef enum {
+	FIR_WIN_RECT,
+	FIR_WIN_HAMMING,
+	FIR_WIN_BLACKMAN
+} FirWindow_t;
 
 /* Private Function Prototypes -----------------------------------------------*/
-void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer);
-void DSP_Update_Adaptive_FIR(float fg);
+float hamming (int i, int N);
+float blackman (int i, int N);
+void fir1(int N, float ft, float *coeffs);
+void fir1_win(int N, float ft, float *coeffs, FirWindow_t win);
 
 #ifdef	__cplusplus
 }
 #endif
 
-#endif // __DSP_PROCESSING_H
-
-
+#endif // __ADAPTIVE_FIR_H

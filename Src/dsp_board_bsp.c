@@ -213,7 +213,7 @@ void BSP_Print_to_Matlab(uint16_t* vals, uint16_t len)
 	printf("x = [");
 	for(uint16_t i = 0; i < len; i++){
 		if(i) printf(", ");  // print colon prior to value for i>0
-		printf("%d", vals[i]);  // @TODO: is this correct dereference ?
+		printf("%d", vals[i]);
 	}
 	printf(" ];\n");
 	printf("plot(x); grid on;\n\n");

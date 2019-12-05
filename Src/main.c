@@ -103,8 +103,8 @@ static void MX_ADC1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 /* PRINTF REDIRECT to UART BEGIN */
-// @see    http://www.keil.com/forum/60531/
-// @see    https://stackoverflow.com/questions/45535126/stm32-printf-redirect
+/** @see    http://www.keil.com/forum/60531/ */
+/** @see    https://stackoverflow.com/questions/45535126/stm32-printf-redirect */
 
 struct __FILE{
   int handle;
@@ -194,7 +194,7 @@ int main(void)
 	ssd1306_Init(&holedR);
 	ssd1306_Fill(&holedR, Black);
 	ssd1306_SetCursor(&holedR, 2, 20);
-	ssd1306_WriteString(&holedR, "Input", Font_11x18, White);
+	// ssd1306_WriteString(&holedR, "Input", Font_11x18, White);
 	ssd1306_UpdateScreen(&holedR);
 	
 	/* Start both Timers in Encoder Mode for Rotary Encoders */
@@ -229,6 +229,7 @@ int main(void)
 	uint8_t input_state = 0;
 	uint8_t update_counter = 0;
 	
+  float lowpass_3db_freq = 1000.0f;
 	uint16_t volume_line = 0, volume_hp = 0;
 	float volume_dB = -34.5f -6.0f;  // -6dB by input voltage divider
 	uint8_t newvolume_line = BSP_ReadEncoder(ENCODER_LEFT) % (0x1F+1);
@@ -239,16 +240,19 @@ int main(void)
 	ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 	ssd1306_UpdateScreen(&holedL);
 	
-	enum { STATE_LINE, STATE_HEADPHONE };
+	enum { STATE_LINE, STATE_HEADPHONE, STATE_FIR_FREQ };
 	uint8_t state_now = STATE_LINE;
 	uint8_t state_next = STATE_LINE;
+	dsp_mode = DSP_MODE_PASSTHROUGH;
 	
+	/* Initialize FIR Filters before using them */
 	FIR_Init_Mono();
 	FIR_Init_Stereo();
+	FIR_Init_Adaptive();
+	
 	/* Start automatic DMA Transmission (Full Duplex) */
 	/* Double buffer length, Interrupt on Half-Full */
 	HAL_I2SEx_TransmitReceive_DMA(&hi2s2, pTxData, pRxData, DSP_BUFFERSIZE_DOUBLE);
-	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -263,7 +267,7 @@ int main(void)
 		update_counter ++;
 		
 		/* STATE MACHINE */
-		uint16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
+		int16_t encoder_change = BSP_ReadEncoder_Difference(ENCODER_LEFT);
 		if(encoder_change){    // only execute when something changed
 			switch(state_now){
 				/* LINE OUT Volume */
@@ -274,9 +278,7 @@ int main(void)
 					TLV320_SetLineInVol(volume_line); // Set the Volume on the Codec
 					// from -34.5dB to +12dB in 1.5 dB Steps  (-6.0dB from input divider)
 					volume_dB = -34.5f -6.0f + (1.5f*(float)volume_line);
-#ifdef ENABLE_PRINTF
-					printf("[VOL LIN]:\t%.1f dB\n", volume_dB);
-#endif
+					sprintf(lcd_buf, "%.1f dB  ", volume_dB);
 					break;
 				/* HEADPHONE Volume */
 				case STATE_HEADPHONE:
@@ -286,15 +288,21 @@ int main(void)
 					TLV320_SetHeadphoneVol(volume_hp);
 					// from -73dB to +6dB in 1dB Steps
 					volume_dB = -73.0 -6.0f + (1.0f*(float)volume_hp);
-#ifdef ENABLE_PRINTF
-					printf("[VOL HP] :\t%.1f dB\n", volume_dB);
-#endif
+					sprintf(lcd_buf, "%.1f dB  ", volume_dB);
+					break;
+				case STATE_FIR_FREQ:
+					lowpass_3db_freq += ((float)encoder_change * 100.0f);  // frequency resolution = 100Hz
+					if(lowpass_3db_freq > 18000.0f) 
+						lowpass_3db_freq = 18000.0f;  // fmax = 18'000 Hz
+					if(lowpass_3db_freq < 100.0f  ) 
+						lowpass_3db_freq = 100.0f;    // fmin =    100 Hz
+					DSP_Update_Adaptive_FIR(lowpass_3db_freq);
+					sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
 					break;
 				default:
 					state_next = STATE_LINE;
 			}
 			// Display new Value on 2nd line on OLED
-			sprintf(lcd_buf, "%.1f dB  ", volume_dB);
 			ssd1306_SetCursor(&holedL, 10, 40);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedL);
@@ -303,35 +311,30 @@ int main(void)
 		/* LEFT USER BUTTON */
 		if(btnLeftPressed){
 			btnLeftPressed= 0;
-#ifdef ENABLE_PRINTF
-			printf("[BTN] Button Left\n");
-#endif
 		}
 		
 		/* RIGHT USER BUTTON */
 		if(btnRightPressed){
 			btnRightPressed= 0;
-			input_state = 1-input_state;
-#ifdef ENABLE_PRINTF
-			printf("[BTN] :\tButton Right\n");
-#endif
+			input_state = (input_state +1)%3;
 			
 			/* Switch Line Input between external Board and 3.5mm Jack */
-			if(input_state){
-#ifdef ENABLE_PRINTF
-				printf("[AUDIO] :\tExt Line\n");
-#endif
+			if(input_state == 0){
 				BSP_SelectAudioIn(AUDIO_IN_EXT);  // select external Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 				sprintf(lcd_buf, "EXT Line ");
+				TLV320_SetInput(LINE);
 				
-			} else {
-#ifdef ENABLE_PRINTF
-				printf("[AUDIO] :\tLine In\n");
-#endif
+			} else if (input_state == 1) {
 				BSP_SelectAudioIn(AUDIO_IN_LINE); // select Jack Source
 				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
 				sprintf(lcd_buf, "Line IN  ");
+				TLV320_SetInput(LINE);
+			} else {
+				BSP_SelectAudioIn(AUDIO_IN_LINE); // select Jack Source
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				sprintf(lcd_buf, "MIC      ");
+				TLV320_SetInput(MIC);
 			}
 			ssd1306_SetCursor(&holedR, 10, 40);
 			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
@@ -341,48 +344,45 @@ int main(void)
 		/* LEFT ENCODER BUTTON */
 		if(encLeftPressed){
 			encLeftPressed = 0;
-#ifdef ENABLE_PRINTF
-			printf("[BTN] :\tEncoder Left\n");
-#endif
 			
 			/* Switch Volume Control State */
 			ssd1306_SetCursor(&holedL, 2, 20);
 			if(state_now == STATE_LINE){
 				state_next = STATE_HEADPHONE;
 				ssd1306_WriteString(&holedL, "HP   Vol", Font_11x18, White);
-#ifdef ENABLE_PRINTF
-				printf("[MODE]:\tHeadphone\n");
-#endif
 				volume_dB = -73.0 + (1.0f*(float)volume_hp);
+			} else if(state_now == STATE_HEADPHONE) {
+				state_next = STATE_FIR_FREQ;
+				ssd1306_WriteString(&holedL, "FIR LP  ", Font_11x18, White);
+				volume_dB = -34.5f + (1.5f*(float)volume_line);
 			} else {
 				state_next = STATE_LINE;
-				ssd1306_WriteString(&holedL, "Line Vol", Font_11x18, White);
-#ifdef ENABLE_PRINTF
-				printf("[MODE]:\tLine\n");
-#endif
-				volume_dB = -34.5f + (1.5f*(float)volume_line);
+				ssd1306_WriteString(&holedL, "LINE Vol", Font_11x18, White);
 			}
-			
-			sprintf(lcd_buf, "%.1f dB  ", volume_dB);
+			if(state_next != STATE_FIR_FREQ){
+				sprintf(lcd_buf, "%.1f dB  ", volume_dB);
+			} else {
+				sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
+			}
 			ssd1306_SetCursor(&holedL, 10, 40);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedL);
-			BSP_ReadEncoder_Difference(ENCODER_LEFT); // make sure delta is empty on state change
 		}
 		
 		/* RIGHT ENCODER BUTTON */
 		if(encRightPressed){
 			encRightPressed = 0;
-#ifdef ENABLE_PRINTF
-			printf("[BTN] :\tEncoder Right\n");
-#endif
 			if(dsp_mode == DSP_MODE_FIR){
+				dsp_mode = DSP_MODE_FIR_ADAPTIVE;
+				sprintf(lcd_buf, "FIR adapt");
+			} else if(dsp_mode == DSP_MODE_FIR_ADAPTIVE) {
 				dsp_mode = DSP_MODE_PASSTHROUGH;
-				sprintf(lcd_buf, "Passthru");
+				sprintf(lcd_buf, "Passthru ");
 			} else {
 				dsp_mode = DSP_MODE_FIR;
-				sprintf(lcd_buf, "FIR     ");
+				sprintf(lcd_buf, "FIR      ");
 			}
+				
 			ssd1306_SetCursor(&holedR, 10, 0);
 			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedR);
@@ -391,23 +391,8 @@ int main(void)
 		/* do something every 1s without user interaction */
 		if(update_counter > 0xfe){
 			update_counter = 0;
-#ifdef ENABLE_PRINTF
-			printf("[JACK] :\t[LIN]\t[MIC]\t[HP]\t[LOUT]\n");
-			uint8_t val = 0;
-			val = BSP_ReadJackConnected(JACK_LINE_IN);
-			printf("       :\t%d \t", val);
-			val = BSP_ReadJackConnected(JACK_MIC);
-			printf("%d \t", val);
-			val = BSP_ReadJackConnected(JACK_HEADPHONE);
-			printf("%d \t", val);
-			val = BSP_ReadJackConnected(JACK_LINE_OUT);
-			printf("%d \n", val);
-#endif
 			
 			float volt = BSP_ReadBatteryVoltage(10);
-#ifdef ENABLE_PRINTF
-			printf("[VBAT]: %.3f V", volt);
-#endif
 			sprintf(lcd_buf, "%.2f V  ", volt);
 			ssd1306_SetCursor(&holedL, 50, 0);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_7x10, White);
