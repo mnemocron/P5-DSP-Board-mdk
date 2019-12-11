@@ -37,14 +37,9 @@ void DSP_Update_Adaptive_FIR(float fg)
 	float32_t new_coeffs[FIR_NUM_TAPS_ADAPTIVE];
 	fir1(FIR_NUM_TAPS_ADAPTIVE, fg/48000.0f, new_coeffs);
 	FIR_Update_Adaptive(new_coeffs, FIR_NUM_TAPS_ADAPTIVE);
-	printf("x = [");
-	for(uint16_t i = 0; i < FIR_NUM_TAPS_ADAPTIVE; i++){
-		if(i) printf(", ");  // print colon prior to value for i>0
-		printf("%.3f", new_coeffs[i]);  // @TODO: is this correct dereference ?
-	}
-	printf(" ];\n");
-	printf("plot(x); grid on;\n\n");
 }
+
+#define DEBUG_DSP_LATENCY 
 
 /**
   * @param sourceBuffer Pointer to the Audio Signal Source Buffer (from DMA ISR)
@@ -53,6 +48,7 @@ void DSP_Update_Adaptive_FIR(float fg)
 void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer)
 {
 #ifdef DEBUG_DSP_LATENCY
+	/* Measure the Latency of the whole DSP_Process */
 	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 #endif
 	static float32_t rxLeft[DSP_BUFFERSIZE_HALF], rxRight[DSP_BUFFERSIZE_HALF];
@@ -79,6 +75,7 @@ void DSP_Process_Data(uint16_t *sourceBuffer, uint16_t *targetBuffer)
 					txLeft[i] = rxLeft[i];
 			}
 			*/
+			/* Latency Measurement of FIR Filter directly */
 			FIR_Filter_F32_Stereo(rxLeft, txLeft, rxRight, txRight);
 			break;
 		case DSP_MODE_GAIN:

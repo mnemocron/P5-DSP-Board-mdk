@@ -62,8 +62,10 @@ void Error_Handler(void);
 #define SET_LIN_GPIO_Port GPIOC
 #define DTC_LIN_Pin GPIO_PIN_14
 #define DTC_LIN_GPIO_Port GPIOC
+#define DTC_LIN_EXTI_IRQn EXTI15_10_IRQn
 #define DTC_MIC_Pin GPIO_PIN_15
 #define DTC_MIC_GPIO_Port GPIOC
+#define DTC_MIC_EXTI_IRQn EXTI15_10_IRQn
 #define DTC_HP_Pin GPIO_PIN_0
 #define DTC_HP_GPIO_Port GPIOC
 #define DTC_LOUT_Pin GPIO_PIN_1

@@ -23,11 +23,10 @@ extern "C" {
 #include "main.h"
 
 /* Private defines -----------------------------------------------------------*/
-#define DSP_BLOCK_SIZE 32
 #define DSP_BUFFERSIZE 128
 #define DSP_BUFFERSIZE_HALF 64
 #define DSP_BUFFERSIZE_DOUBLE 256
-#define DEBUG_DSP_LATENCY   // enable to toggle LED to measure latency
+// #define DEBUG_DSP_LATENCY   // enable to toggle LED to measure latency
 
 /* Private Typedefs ----------------------------------------------------------*/
 typedef struct {

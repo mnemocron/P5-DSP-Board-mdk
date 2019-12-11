@@ -290,6 +290,7 @@ int main(void)
 					volume_dB = -73.0 -6.0f + (1.0f*(float)volume_hp);
 					sprintf(lcd_buf, "%.1f dB  ", volume_dB);
 					break;
+				/*
 				case STATE_FIR_FREQ:
 					lowpass_3db_freq += ((float)encoder_change * 100.0f);  // frequency resolution = 100Hz
 					if(lowpass_3db_freq > 18000.0f) 
@@ -299,6 +300,7 @@ int main(void)
 					DSP_Update_Adaptive_FIR(lowpass_3db_freq);
 					sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
 					break;
+				*/
 				default:
 					state_next = STATE_LINE;
 			}
@@ -306,6 +308,22 @@ int main(void)
 			ssd1306_SetCursor(&holedL, 10, 40);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedL);
+		}
+
+		encoder_change = BSP_ReadEncoder_Difference(ENCODER_RIGHT);
+		if(encoder_change){    // only execute when something changed
+			if(dsp_mode == DSP_MODE_FIR_ADAPTIVE){
+				lowpass_3db_freq += ((float)encoder_change * 100.0f);  // frequency resolution = 100Hz
+				if(lowpass_3db_freq > 18000.0f) 
+					lowpass_3db_freq = 18000.0f;  // fmax = 18'000 Hz
+				if(lowpass_3db_freq < 100.0f  ) 
+					lowpass_3db_freq = 100.0f;    // fmin =    100 Hz
+				DSP_Update_Adaptive_FIR(lowpass_3db_freq);
+				sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
+				ssd1306_SetCursor(&holedR, 10, 20);
+				ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
+				ssd1306_UpdateScreen(&holedR);
+			}
 		}
 		
 		/* LEFT USER BUTTON */
@@ -350,20 +368,14 @@ int main(void)
 			if(state_now == STATE_LINE){
 				state_next = STATE_HEADPHONE;
 				ssd1306_WriteString(&holedL, "HP   Vol", Font_11x18, White);
-				volume_dB = -73.0 + (1.0f*(float)volume_hp);
-			} else if(state_now == STATE_HEADPHONE) {
-				state_next = STATE_FIR_FREQ;
-				ssd1306_WriteString(&holedL, "FIR LP  ", Font_11x18, White);
-				volume_dB = -34.5f + (1.5f*(float)volume_line);
+				volume_dB = -73.0 -6.0f + (1.0f*(float)volume_hp);
 			} else {
 				state_next = STATE_LINE;
 				ssd1306_WriteString(&holedL, "LINE Vol", Font_11x18, White);
+				volume_dB = -34.5f -6.0f + (1.5f*(float)volume_line);
 			}
-			if(state_next != STATE_FIR_FREQ){
-				sprintf(lcd_buf, "%.1f dB  ", volume_dB);
-			} else {
-				sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
-			}
+			sprintf(lcd_buf, "%.1f dB  ", volume_dB);
+
 			ssd1306_SetCursor(&holedL, 10, 40);
 			ssd1306_WriteString(&holedL, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedL);
@@ -382,8 +394,16 @@ int main(void)
 				dsp_mode = DSP_MODE_FIR;
 				sprintf(lcd_buf, "FIR      ");
 			}
-				
 			ssd1306_SetCursor(&holedR, 10, 0);
+			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
+			ssd1306_UpdateScreen(&holedR);
+
+			if(dsp_mode == DSP_MODE_FIR_ADAPTIVE){
+				sprintf(lcd_buf, "%.1f kHz  ", lowpass_3db_freq/1000);
+			} else {
+				sprintf(lcd_buf, "           ");
+			}
+			ssd1306_SetCursor(&holedR, 10, 20);
 			ssd1306_WriteString(&holedR, lcd_buf, Font_11x18, White);
 			ssd1306_UpdateScreen(&holedR);
 		}
@@ -813,8 +833,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DTC_LIN_Pin DTC_MIC_Pin DTC_HP_Pin DTC_LOUT_Pin */
-  GPIO_InitStruct.Pin = DTC_LIN_Pin|DTC_MIC_Pin|DTC_HP_Pin|DTC_LOUT_Pin;
+  /*Configure GPIO pins : DTC_LIN_Pin DTC_MIC_Pin */
+  GPIO_InitStruct.Pin = DTC_LIN_Pin|DTC_MIC_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DTC_HP_Pin DTC_LOUT_Pin */
+  GPIO_InitStruct.Pin = DTC_HP_Pin|DTC_LOUT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);

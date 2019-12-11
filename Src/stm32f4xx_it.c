@@ -293,20 +293,34 @@ void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
 	
-	
 		// ROT1 - right - PC12 - EXTI12
 		// ROT2 - left  - PB13 - EXTI13
+	  // DTC_LIN - PC14 - EXTI14
+	  // DTC_MIC - PC15 - EXTI15
 	
 	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_12)){
-		encRightPressed ++;
+	/**
+	  * @bug Turning the encoder (TIM4) also issues an EXTI_12 Interrupt
+		*      hacky fix: check if Button is actually pressed
+	  */
+		if(HAL_GPIO_ReadPin(BTN_ENC1_GPIO_Port, BTN_ENC1_Pin) == GPIO_PIN_SET)
+			encRightPressed ++;
 	}
 	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_13)){
 		encLeftPressed ++;
+	}
+	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_14)){
+		/* LINE IN Detect : rising/falling edge = connected/disconnected */
+	}
+	if(__HAL_GPIO_EXTI_GET_FLAG(GPIO_PIN_15)){
+		/* MIC IN Detect : rising/falling edge = connected/disconnected */
 	}
 
   /* USER CODE END EXTI15_10_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_14);
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
