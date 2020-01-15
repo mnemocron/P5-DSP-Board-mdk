@@ -243,7 +243,12 @@ int main(void)
 	enum { STATE_LINE, STATE_HEADPHONE, STATE_FIR_FREQ };
 	uint8_t state_now = STATE_LINE;
 	uint8_t state_next = STATE_LINE;
+	
+	/* Set the default mode to audio passthrough */
 	dsp_mode = DSP_MODE_PASSTHROUGH;
+	ssd1306_SetCursor(&holedR, 10, 0);
+	ssd1306_WriteString(&holedR, "Passthru", Font_11x18, White);
+	ssd1306_UpdateScreen(&holedR);
 	
 	/* Initialize FIR Filters before using them */
 	FIR_Init_Mono();
